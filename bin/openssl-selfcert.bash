@@ -1,6 +1,6 @@
 #!/bin/bash
 ##
-## OpenSSL: Create a self-signed certificate with X.509 extensions
+## OpenSSL: Create a self-signed certificate with X.509 extensions (subjectAltName, nameConstraints)
 ## Copyright (c) 2015 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
@@ -10,6 +10,8 @@
 ##   * RFC 5280
 ##     Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile
 ##     https://tools.ietf.org/html/rfc5280
+##   * Code Kills : Adventures in X.509: The Utterly Ignored nameConstraints
+##     http://blog.codekills.net/2012/04/08/adventures-in-x509-the-utterly-ignored-nameconstraints/
 ##
 
 set -u
@@ -72,7 +74,6 @@ done
   echo "subjectKeyIdentifier = hash"
   echo "authorityKeyIdentifier = keyid:always,issuer"
   echo "basicConstraints = CA:true"
-  echo "nameConstraints = permitted;DNS:$cn"
 
   if [[ ${#altnames[@]} > 0 ]]; then
     echo "[v3_ca]"
@@ -83,10 +84,16 @@ done
     done |awk '{ print $1"."NR" = "$2 }'
   fi
 
+  echo "[v3_ca]"
+  echo "nameConstraints = critical, @nameconstraints"
+  echo "[nameconstraints_dirname]"
+  echo "CN = $cn"
+  echo "[nameconstraints]"
+  echo "permitted;dirName = nameconstraints_dirname"
+  echo "## NOTE: Following name constraints does NOT affect by OpenSSL and GnuTLS."
+  echo "## See:  http://blog.codekills.net/2012/04/08/adventures-in-x509-the-utterly-ignored-nameconstraints/"
+  echo "permitted;DNS.0 = $cn"
   if [[ ${#nameconstraints[@]} > 0 ]]; then
-    echo "[v3_ca]"
-    echo "nameConstraints = @nameconstraints"
-    echo "[nameconstraints]"
     for nameconstraint in "${nameconstraints[@]}"; do
       echo "$nameconstraint"
     done |awk '{ print $1"."NR" = "$2 }'
