@@ -84,14 +84,14 @@ done
     done |awk '{ print $1"."NR" = "$2 }'
   fi
 
+  echo "## NOTE: Following name constraints does NOT affect by OpenSSL and GnuTLS."
   echo "[v3_ca]"
   echo "nameConstraints = critical, @nameconstraints"
   echo "[nameconstraints_dirname]"
   echo "CN = $cn"
   echo "[nameconstraints]"
   echo "permitted;dirName = nameconstraints_dirname"
-  echo "## NOTE: Following name constraints does NOT affect by OpenSSL and GnuTLS."
-  echo "## See:  http://blog.codekills.net/2012/04/08/adventures-in-x509-the-utterly-ignored-nameconstraints/"
+  echo "## NOTE: Following name constraints does NOT affect by OpenSSL, GnuTLS and NSS."
   echo "permitted;DNS.0 = $cn"
   if [[ ${#nameconstraints[@]} > 0 ]]; then
     for nameconstraint in "${nameconstraints[@]}"; do
