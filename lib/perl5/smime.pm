@@ -1,8 +1,9 @@
 ##
 ## S/MIME sign/verify/encrypt/decrypt module by using openssl(1)
+## Copyright (c) 2015 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ## Copyright (c) 2002-2003 SATOH Fumiyasu, All rights reserved.
 ##
-## Lisence: GNU GPL version 2
+## Lisence: GNU General Public License version 2
 ## Date: 2003-04-14, since 2002-10-27
 ##
 
@@ -47,9 +48,11 @@ my @SMIME_ENCRYPT = (@SMIME, '-encrypt');
 my @SMIME_DECRYPT = (@SMIME, '-decrypt');
 
 my @CIPHER = qw(
-    des des3 rc2-40 rc2-64 rc2-128
+    aes256 aes192 aes128
+    camellia256 camellia192 camellia128
+    des3
 );
-my $CIPHER_DEFAULT = 'des3';
+my $CIPHER_DEFAULT = 'aes128';
 
 ## ======================================================================
 
