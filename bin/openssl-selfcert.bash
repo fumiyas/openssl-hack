@@ -12,6 +12,8 @@
 ##     https://tools.ietf.org/html/rfc5280
 ##   * Code Kills : Adventures in X.509: The Utterly Ignored nameConstraints
 ##     http://blog.codekills.net/2012/04/08/adventures-in-x509-the-utterly-ignored-nameconstraints/
+##   * Generate self-signed x509 certificates valid for multiple URLs/IPs
+##     https://github.com/frntn/x509-san
 ##
 
 set -u
