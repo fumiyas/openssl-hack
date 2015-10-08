@@ -271,12 +271,16 @@ CA_crl() {
   ;
 }
 
-cmd="$1"; shift
-if PATH= type "CA_$cmd" >/dev/null 2>&1; then
-  [[ -f etc/ca.env ]] && . etc/ca.env >/dev/null 2>&1
-  "CA_$cmd" "$@"
+if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
+  cmd_name="${1//-/_}"; shift
+  if ! PATH= type "CA_$cmd_name" >/dev/null 2>&1; then
+    CA_die "Invalid command: $cmd_name"
+  fi
+
+  [[ $cmd_name != init && -f etc/ca.env ]] && . etc/ca.env >/dev/null 2>&1
+  "CA_$cmd_name" "$@"
   exit "$?"
-else
-  CA_die "Invalid command: $cmd"
 fi
+
+return 0
 
