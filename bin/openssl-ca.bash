@@ -10,8 +10,10 @@
 set -u
 set -C
 
+export CA_TITLE="${CA_TITLE:-OpenSSL Simple CA (${0##*/})}"
 export CA_KEY_BITS="${CA_KEY_BITS:-4096}"
 export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
+export CA_CERT_ALTNAMES=""
 export CA_CERT_DAYS="${CA_CERT_DAYS:-3650}"
 export CA_CRL_DAYS="${CA_CRL_DAYS:-365}"
 
@@ -21,13 +23,13 @@ CA_die() {
 }
 
 CA_init() {
-  if [[ $# -ne 2 ]]; then
-    CA_die "Usage: init CA_DIR CA_TITLE"
+  if [[ $# -lt 1 || $# -gt 2 ]]; then
+    CA_die "Usage: init CA_DIR [CA_TITLE]"
     return 1
   fi
 
   local ca_dir="$1"; shift
-  local ca_title="$1"; shift
+  local ca_title="${1:-$CA_TITLE}"; ${1+shift}
 
   mkdir -m 0700 \
     "$ca_dir" \
@@ -45,6 +47,14 @@ CA_init() {
   echo 100000 >"$ca_dir/serial" || return 1
   echo 00 >"$ca_dir/crlnumber" || return 1
   touch "$ca_dir/index.txt" || return 1
+
+  cat >"$ca_dir/etc/CA.env" <<EOF || return 1
+CA_TITLE="$ca_title"
+CA_KEY_BITS="$CA_KEY_BITS"
+CA_DIGEST_ALGORITHM="$CA_DIGEST_ALGORITHM"
+CA_CERT_DAYS="$CA_CERT_DAYS"
+CA_CRL_DAYS="$CA_CRL_DAYS"
+EOF
 
   cat >"$ca_dir/etc/openssl.cnf" <<'EOF' || return 1
 [ ca ]
@@ -123,23 +133,27 @@ keyUsage=		nonRepudiation, digitalSignature, keyEncipherment
 ## ======================================================================
 
 basicConstraints=	CA:false
-nsComment=		"OpenSSL Simple CA Generated Server Certificate"
+nsComment=		$ENV::CA_TITLE Generated Server Certificate
 
 subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid,issuer:always
 keyUsage=		digitalSignature, keyEncipherment
 extendedKeyUsage=	serverAuth
 
+subjectAltName=		$ENV::CA_CERT_ALTNAMES
+
 [ client_cert ]
 ## ======================================================================
 
 basicConstraints=	CA:false
-nsComment=		"OpenSSL Simple CA Generated Client Certificate"
+nsComment=		$ENV::CA_TITLE Generated Client Certificate
 
 subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid,issuer:always
 keyUsage=		digitalSignature
 extendedKeyUsage=	clientAuth
+
+subjectAltName=		$ENV::CA_CERT_ALTNAMES
 
 [ crl_ext ]
 ## ======================================================================
@@ -258,15 +272,15 @@ CA_sign() {
 
   local altnames=""
   local altname
-  for altname in "$@"; do
+  for altname in "$cn" "$@"; do
     ## FIXME: Support IP:192.168.0.1 and so on
     altnames="${altnames:+$altnames,}DNS:$altname"
   done
 
+  CA_CERT_ALTNAMES="$altnames" \
   CA_openssl_ca \
     -in "$csr" \
     -out "$cert" \
-    -extfile <(echo ${altnames:+subjectAltName="$altnames"}) \
   ;
 }
 
