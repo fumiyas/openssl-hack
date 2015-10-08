@@ -21,8 +21,13 @@ CA_die() {
 }
 
 CA_init() {
-  local cn="$1"; shift
+  if [[ $# -ne 2 ]]; then
+    CA_die "Usage: init CA_DIR CA_TITLE"
+    return 1
+  fi
+
   local ca_dir="$1"; shift
+  local ca_title="$1"; shift
 
   mkdir -m 0700 \
     "$ca_dir" \
@@ -52,8 +57,8 @@ default_ca=		CA_default
 
 dir=			.
 
-private_key=		$dir/private/ca.key
-certificate=		$dir/certs/ca.crt
+private_key=		$dir/private/CA.key
+certificate=		$dir/certs/CA.crt
 
 serial=			$dir/serial
 certs=			$dir/certs
@@ -146,16 +151,16 @@ EOF
     -config "$ca_dir/etc/openssl.cnf" \
     -new \
     -x509 \
-    -subj "/CN=$cn" \
+    -subj "/CN=$ca_title" \
     -extensions v3_ca \
     -days "$CA_CERT_DAYS" \
     -nodes \
-    -keyout "$ca_dir/private/ca.key" \
-    -out "$ca_dir/certs/ca.crt" \
+    -keyout "$ca_dir/private/CA.key" \
+    -out "$ca_dir/certs/CA.crt" \
   || return 1 \
   ;
-  chmod 0400 "$ca_dir/private/ca.key" || return 1
-  chmod 0444 "$ca_dir/certs/ca.crt" || return 1
+  chmod 0400 "$ca_dir/private/CA.key" || return 1
+  chmod 0444 "$ca_dir/certs/CA.crt" || return 1
 }
 
 CA_openssl() {
@@ -169,36 +174,52 @@ CA_openssl() {
 }
 
 CA_key() {
-  local cn="$1"; shift
+  if [[ $# -ne 1 ]]; then
+    CA_die "Usage: key CN"
+    return 1
+  fi
+
+  local cn="${1,,}"; shift
   local key="private/$cn.key"
 
-  openssl genrsa \
-    "$CA_KEY_BITS" \
-  >"$key" \
-  || return 1 \
-  ;
-  chmod 0444 "$key" || return 1
+  (
+    umask 0277
+    openssl genrsa \
+      "$CA_KEY_BITS" \
+    >"$key" \
+    ;
+  ) || return 1
 }
 
 CA_csr() {
-  local req_cn="$1"; shift
-
-  local req_key
-  if [[ -f "$req_cn" ]]; then
-    req_key="$req_cn"
-    req_cn="${req_cn##*/}"
-    req_cn="${req_cn%.key}"
-  else
-    req_key="private/$req_cn.key"
+  if [[ $# -ne 1 ]]; then
+    CA_die "Usage: csr CN"
+    return 1
   fi
-  local req_csr="csr/$req_cn.csr"
+
+  local key_or_cn="$1"; shift
+
+  local cn key
+  if [[ -f "$key_or_cn" ]]; then
+    key="$key_or_cn"
+    cn="${key_or_cn##*/}"
+    cn="${cn%.key}"
+    cn="${cn,,}"
+  else
+    cn="$key_or_cn"
+    key="private/$cn.key"
+    if [[ ! -f "$key" ]]; then
+      CA_key "$cn" || return $?
+    fi
+  fi
+  local csr="csr/$cn.csr"
 
   CA_openssl req \
     -utf8 \
     -new \
-    -key "$req_key" \
-    -subj "/CN=$req_cn" \
-  >"$req_csr" \
+    -key "$key" \
+    -subj "/CN=$cn" \
+  >"$csr" \
   ;
 }
 
@@ -212,30 +233,40 @@ CA_openssl_ca() {
 }
 
 CA_sign() {
-  local req_cn="$1"; shift
-
-  local req_csr
-  if [[ -f "$req_cn" ]]; then
-    req_csr="$req_cn"
-    req_cn="${req_cn##*/}"
-    req_cn="${req_cn%.csr}"
-  else
-    req_csr="csr/$req_cn.csr"
+  if [[ $# -ne 1 ]]; then
+    CA_die "Usage: sign CN"
+    return 1
   fi
 
-  local req_cert="signed/$req_cn.crt"
+  local csr_or_cn="$1"; shift
 
-  local req_altnames=""
-  local req_altname
-  for req_altname in "$@"; do
+  local cn csr
+  if [[ -f "$csr_or_cn" ]]; then
+    csr="$csr_or_cn"
+    cn="${csr_or_cn##*/}"
+    cn="${cn%.csr}"
+    cn="${cn,,}"
+  else
+    cn="$csr_or_cn"
+    csr="csr/$cn.csr"
+    if [[ ! -f "$csr" ]]; then
+      CA_csr "$cn" "$@" || return $?
+    fi
+  fi
+
+  local cert="signed/$cn.crt"
+
+  local altnames=""
+  local altname
+  for altname in "$@"; do
     ## FIXME: Support IP:192.168.0.1 and so on
-    req_altnames="${req_altnames:+$req_altnames,}DNS:$req_altname"
+    altnames="${altnames:+$altnames,}DNS:$altname"
   done
 
   CA_openssl_ca \
-    -in "$req_csr" \
-    -out "$req_cert" \
-    -extfile <(echo ${req_altnames:+subjectAltName="$req_altnames"}) \
+    -in "$csr" \
+    -out "$cert" \
+    -extfile <(echo ${altnames:+subjectAltName="$altnames"}) \
   ;
 }
 
@@ -249,19 +280,21 @@ CA_status() {
 }
 
 CA_revoke() {
-  local req_cn="$1"; shift
+  local cert_or_cn="$1"; shift
 
-  local req_cert
-  if [[ -f "$req_cn" ]]; then
-    req_cert="$req_cn"
-    req_cn="${req_cn##*/}"
-    req_cn="${req_cn%.crt}"
+  local cn cert
+  if [[ -f "$cert_or_cn" ]]; then
+    cert="$cert_or_cn"
+    cn="${cert_or_cn##*/}"
+    cn="${cn%.crt}"
+    cn="${cn,,}"
   else
-    req_cert="signed/$req_cn.crt"
+    cn="$cert_or_cn"
+    cert="signed/$cn.crt"
   fi
 
   CA_openssl_ca \
-    -revoke "$req_cert" \
+    -revoke "$cert" \
   ;
 }
 
@@ -277,7 +310,7 @@ if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
     CA_die "Invalid command: $cmd_name"
   fi
 
-  [[ $cmd_name != init && -f etc/ca.env ]] && . etc/ca.env >/dev/null 2>&1
+  [[ $cmd_name != init && -f etc/CA.env ]] && . etc/CA.env >/dev/null 2>&1
   "CA_$cmd_name" "$@"
   exit "$?"
 fi
