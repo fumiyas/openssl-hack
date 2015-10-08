@@ -33,6 +33,7 @@ CA_init() {
   || return 1 \
   ;
   echo 100000 >"$ca_dir/serial" || return 1
+  echo 00 >"$ca_dir/crlnumber" || return 1
   touch "$ca_dir/index.txt" || return 1
 
   cat >"$ca_dir/etc/openssl.cnf" <<'EOF' || return 1
@@ -231,16 +232,40 @@ CA_sign() {
 
   CA_openssl_ca \
     -in "$req_csr" \
-    -out "$req_certs" \
+    -out "$req_cert" \
     -extfile <(echo ${req_altnames:+subjectAltName="$req_altnames"}) \
   ;
 }
 
 CA_status() {
+  ## FIXME: Get serial number from certificate
   local serial="$1"; shift
 
   CA_openssl_ca \
     -status "$serial" \
+  ;
+}
+
+CA_revoke() {
+  local req_cn="$1"; shift
+
+  local req_cert
+  if [[ -f "$req_cn" ]]; then
+    req_cert="$req_cn"
+    req_cn="${req_cn##*/}"
+    req_cn="${req_cn%.crt}"
+  else
+    req_cert="signed/$req_cn.crt"
+  fi
+
+  CA_openssl_ca \
+    -revoke "$req_cert" \
+  ;
+}
+
+CA_crl() {
+  CA_openssl_ca \
+    -gencrl \
   ;
 }
 
