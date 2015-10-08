@@ -1,7 +1,6 @@
 #!/bin/bash
 ##
 ## OpenSSL: Simple CA implementation
-##
 ## Copyright (c) 2015 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
@@ -286,7 +285,21 @@ CA_sign() {
 
 CA_status() {
   ## FIXME: Get serial number from certificate
-  local serial="$1"; shift
+  local serial_or_cert_or_cn="$1"; shift
+
+  local serial
+  if [[ -f signed/$serial_or_cert_or_cn.pem ]]; then
+    serial="$serial_or_cert_or_cn"
+  else
+    local cert
+    if [[ -f $serial_or_cert_or_cn ]]; then
+      cert="$serial_or_cert_or_cn"
+    else
+      cert="signed/$serial_or_cert_or_cn.crt"
+    fi
+    serial=$(openssl x509 -serial -noout <"$cert") || return 1
+    serial="${serial#*=}"
+  fi
 
   CA_openssl_ca \
     -status "$serial" \
