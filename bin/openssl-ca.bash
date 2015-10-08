@@ -10,6 +10,11 @@
 set -u
 set -C
 
+export CA_KEY_BITS="${CA_KEY_BITS:-4096}"
+export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
+export CA_CERT_DAYS="${CA_CERT_DAYS:-3650}"
+export CA_CRL_DAYS="${CA_CRL_DAYS:-365}"
+
 CA_die() {
   echo "$0: ERROR: $*" 1>&2
   exit "${2-1}"
@@ -60,9 +65,9 @@ crlnumber=		$dir/crlnumber
 crl=			$dir/crl.pem
 RANDFILE=		$dir/private/random
 
-default_days=		3650
-default_crl_days=	365
-default_md=		sha384
+default_days=		$ENV::CA_CERT_DAYS
+default_crl_days=	$ENV::CA_CRL_DAYS
+default_md=		$ENV::CA_DIGEST_ALGORITHM
 x509_extensions=	client_cert
 
 policy=			policy_anything
@@ -81,8 +86,8 @@ emailAddress=		optional
 [ req ]
 ## ======================================================================
 
-default_bits=		4096
-default_md=		sha384
+default_bits=		$ENV::CA_KEY_BITS
+default_md=		$ENV::CA_DIGEST_ALGORITHM
 x509_extensions=	v3_ca
 
 distinguished_name=	req_distinguished_name
@@ -120,8 +125,6 @@ authorityKeyIdentifier=	keyid,issuer:always
 keyUsage=		digitalSignature, keyEncipherment
 extendedKeyUsage=	serverAuth
 
-subjectAltName=		
-
 [ client_cert ]
 ## ======================================================================
 
@@ -132,8 +135,6 @@ subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid,issuer:always
 keyUsage=		digitalSignature
 extendedKeyUsage=	clientAuth
-
-subjectAltName=		
 
 [ crl_ext ]
 ## ======================================================================
@@ -147,7 +148,7 @@ EOF
     -x509 \
     -subj "/CN=$cn" \
     -extensions v3_ca \
-    -days 3650 \
+    -days "$CA_CERT_DAYS" \
     -nodes \
     -keyout "$ca_dir/private/ca.key" \
     -out "$ca_dir/certs/ca.crt" \
@@ -172,7 +173,7 @@ CA_key() {
   local key="private/$cn.key"
 
   openssl genrsa \
-    4096 \
+    "$CA_KEY_BITS" \
   >"$key" \
   || return 1 \
   ;
@@ -206,6 +207,7 @@ CA_openssl_ca() {
     -utf8 \
     -batch \
     "$@" \
+  2> >(sed '/^Using configuration from etc\/openssl\.cnf$/d' 1>&2) \
   ;
 }
 
@@ -271,6 +273,7 @@ CA_crl() {
 
 cmd="$1"; shift
 if PATH= type "CA_$cmd" >/dev/null 2>&1; then
+  [[ -f etc/ca.env ]] && . etc/ca.env >/dev/null 2>&1
   "CA_$cmd" "$@"
   exit "$?"
 else
