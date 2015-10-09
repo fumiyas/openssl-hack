@@ -5,6 +5,8 @@
 ##
 ## License: GNU General Public License version 3
 ##
+## WARNING: This software comes with ABSOLUTELY NO WARRANTY
+##
 
 set -u
 set -C
