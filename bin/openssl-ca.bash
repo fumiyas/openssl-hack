@@ -194,14 +194,20 @@ CA_key() {
 
   local cn="${1,,}"; shift
   local key="private/$cn.key"
+  local key_tmp="$key.$$.tmp"
 
   (
     umask 0277
     openssl genrsa \
       "$CA_KEY_BITS" \
-    >"$key" \
+    >"$key_tmp" \
     ;
-  ) || return 1
+  ) || {
+    rm -f "$key_tmp"
+    return 1
+  }
+
+  mv "$key_tmp" "$key" || return 1
 }
 
 CA_csr() {
@@ -226,14 +232,20 @@ CA_csr() {
     fi
   fi
   local csr="csr/$cn.csr"
+  local csr_tmp="$csr.$$.tmp"
 
   CA_openssl req \
     -utf8 \
     -new \
     -key "$key" \
     -subj "/CN=$cn" \
-  >"$csr" \
-  ;
+  >"$csr_tmp" \
+  || {
+    rm -f "$csr_tmp"
+    return 1
+  }
+
+  mv "$csr_tmp" "$csr" || return 1
 }
 
 CA_openssl_ca() {
@@ -242,6 +254,7 @@ CA_openssl_ca() {
     -batch \
     "$@" \
   2> >(sed '/^Using configuration from etc\/openssl\.cnf$/d' 1>&2) \
+  || return 1 \
   ;
 }
 
@@ -326,9 +339,18 @@ CA_revoke() {
 }
 
 CA_crl() {
+  local crl="crl/CA.crl"
+  local crl_tmp="$crl.$$.tmp"
+
   CA_openssl_ca \
     -gencrl \
-  ;
+  >"$crl_tmp" \
+  || {
+    rm -f "$crl_tmp"
+    return 1
+  }
+
+  mv "$crl_tmp" "$crl" || return 1
 }
 
 if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
