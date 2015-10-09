@@ -216,6 +216,7 @@ CA_csr() {
     return 1
   fi
 
+  ## FIXME: How to specify other attributes, such as C(ountry)?
   local key_or_cn="$1"; shift
 
   local cn key
@@ -264,6 +265,7 @@ CA_sign() {
     return 1
   fi
 
+  ## FIXME: How to specify a policy?
   local csr_or_cn="$1"; shift
 
   local cn csr
