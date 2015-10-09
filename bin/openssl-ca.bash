@@ -14,9 +14,10 @@ set -C
 export CA_TITLE="${CA_TITLE:-OpenSSL Simple CA (${0##*/})}"
 export CA_KEY_BITS="${CA_KEY_BITS:-4096}"
 export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
-export CA_CERT_ALTNAMES=""
 export CA_CERT_DAYS="${CA_CERT_DAYS:-3650}"
 export CA_CRL_DAYS="${CA_CRL_DAYS:-365}"
+
+export CA_CERT_ALTNAMES=""
 
 CA_die() {
   echo "$0: ERROR: $*" 1>&2
@@ -42,9 +43,9 @@ CA_init() {
     "$ca_dir/crl" \
   || return 1 \
   ;
-  echo 100000 >"$ca_dir/serial" || return 1
-  echo 00 >"$ca_dir/crlnumber" || return 1
   touch "$ca_dir/index.txt" || return 1
+  echo 100000 >"$ca_dir/serial.txt" || return 1
+  echo 00 >"$ca_dir/crlnumber.txt" || return 1
 
   cat >"$ca_dir/etc/CA.env" <<EOF || return 1
 CA_TITLE="$ca_title"
@@ -68,13 +69,13 @@ dir=			.
 private_key=		$dir/private/CA.key
 certificate=		$dir/certs/CA.crt
 
-serial=			$dir/serial
+serial=			$dir/serial.txt
 certs=			$dir/certs
 new_certs_dir=		$dir/signed
 crl_dir=		$dir/crl
 database=		$dir/index.txt
 
-crlnumber=		$dir/crlnumber
+crlnumber=		$dir/crlnumber.txt
 crl=			$dir/crl.pem
 RANDFILE=		$dir/private/random
 
@@ -296,7 +297,6 @@ CA_sign() {
 }
 
 CA_status() {
-  ## FIXME: Get serial number from certificate
   local serial_or_cert_or_cn="$1"; shift
 
   local serial
