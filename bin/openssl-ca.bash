@@ -32,11 +32,8 @@ CA_init() {
   local ca_dir="$1"; shift
   local ca_title="${1:-$CA_TITLE}"; ${1+shift}
 
-  mkdir -m 0700 \
-    "$ca_dir" \
-    "$ca_dir/private" \
-  || return 1 \
-  ;
+  mkdir -m 0755 "$ca_dir" || return 1
+  mkdir -m 0750 "$ca_dir/private" || return 1
   mkdir -m 0755 \
     "$ca_dir/etc" \
     "$ca_dir/certs" \
@@ -199,7 +196,7 @@ CA_key() {
   local key_tmp="$key.$$.tmp"
 
   (
-    umask 0277
+    umask 0227
     openssl genrsa \
       "$CA_KEY_BITS" \
     >"$key_tmp" \
