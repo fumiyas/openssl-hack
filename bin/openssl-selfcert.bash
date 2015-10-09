@@ -5,6 +5,8 @@
 ##
 ## License: GNU General Public License version 3
 ##
+## WARNING: This software comes with ABSOLUTELY NO WARRANTY
+##
 ## References:
 ##   * x509v3_config(5)
 ##   * RFC 5280
