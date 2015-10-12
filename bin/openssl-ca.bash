@@ -82,7 +82,7 @@ RANDFILE=		$dir/private/random
 default_days=		$ENV::CA_CERT_DAYS
 default_crl_days=	$ENV::CA_CRL_DAYS
 default_md=		$ENV::CA_DIGEST_ALGORITHM
-x509_extensions=	client_cert
+x509_extensions=	server_cert
 
 policy=			policy_anything
 
