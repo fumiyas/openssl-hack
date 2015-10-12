@@ -290,6 +290,10 @@ sub _test
 
 __END__
 
+=pod
+
+=encoding utf8
+
 =head1 名前
 
 smime - OpenSSL の openssl コマンドを利用した S/MIME ライブラリ
