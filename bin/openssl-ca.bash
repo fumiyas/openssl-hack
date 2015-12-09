@@ -1,6 +1,6 @@
 #!/bin/bash
 ##
-## OpenSSL: Simple CA implementation
+## OpenSSL: Simple and Stupid CA implementation
 ## Copyright (c) 2015 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
@@ -11,7 +11,7 @@
 set -u
 set -C
 
-export CA_TITLE="${CA_TITLE:-OpenSSL Simple CA (${0##*/})}"
+export CA_TITLE="${CA_TITLE:-OpenSSL Simple and Stupid CA (${0##*/})}"
 export CA_KEY_BITS="${CA_KEY_BITS:-4096}"
 export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
 export CA_CERT_DAYS="${CA_CERT_DAYS:-3650}"
@@ -22,6 +22,33 @@ export CA_CERT_ALTNAMES=""
 CA_die() {
   echo "$0: ERROR: $*" 1>&2
   exit "${2-1}"
+}
+
+CA_usage() {
+  local n="${0##*/}"
+
+  cat <<EOF
+Initialize:
+  $n init /srv/ca 'Demo CA (NO WARRANTY)'
+
+Usage:
+  cd /srv/ca
+  $n key www.example.jp
+  $n csr www.example.jp
+  $n sign www.example.jp [altname.example.com ...]
+  $n revoke www.example.jp
+  $n status www.example.jp
+  $n crl
+
+Files:
+  etc/*				CA's configurations
+  private/CA.key		CA's key
+  certs/CA.crt			CA's certificate
+  crl/CA.crl			CA's CRL
+  csr/*.csr			Generated or received CSRs
+  private/*.key			Generated keys
+  signed/*.crt			Signed certificates
+EOF
 }
 
 CA_init() {
@@ -261,7 +288,7 @@ CA_openssl_ca() {
 
 CA_sign() {
   if [[ $# -ne 1 ]]; then
-    CA_die "Usage: sign CN"
+    CA_die "Usage: sign CN [ALTNAME ...]"
     return 1
   fi
 
@@ -355,6 +382,10 @@ CA_crl() {
 }
 
 if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
+  if [[ -z ${1-} ]]; then
+    CA_usage
+    exit 1
+  fi
   cmd_name="${1//-/_}"; shift
   if ! PATH= type "CA_$cmd_name" >/dev/null 2>&1; then
     CA_die "Invalid command: $cmd_name"
