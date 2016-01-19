@@ -79,7 +79,7 @@ done
   echo "authorityKeyIdentifier = keyid:always,issuer"
   echo "basicConstraints = CA:true"
 
-  if [[ ${#altnames[@]} > 0 ]]; then
+  if [[ ${#altnames[@]} -gt 0 ]]; then
     echo "[v3_ca]"
     echo "subjectAltName = @altnames"
     echo '[altnames]'
@@ -97,7 +97,7 @@ done
   echo "permitted;dirName = nameconstraints_dirname"
   echo "## NOTE: Following name constraints does NOT affect by OpenSSL, GnuTLS and NSS."
   echo "permitted;DNS.0 = $cn"
-  if [[ ${#nameconstraints[@]} > 0 ]]; then
+  if [[ ${#nameconstraints[@]} -gt 0 ]]; then
     for nameconstraint in "${nameconstraints[@]}"; do
       echo "$nameconstraint"
     done |awk '{ print $1"."NR" = "$2 }'
