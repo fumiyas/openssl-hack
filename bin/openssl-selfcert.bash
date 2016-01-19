@@ -39,7 +39,9 @@ cn="$1"; shift
 
 altnames=()
 nameconstraints=()
-for altname in "$@"; do
+
+## CN should be in subjectAltNames too (RFC 6125)
+for altname in "$cn" "$@"; do
   altname_type=""
   if [[ $altname =~ ^[0-9.]*$ ]]; then
     altname_type="IP"
