@@ -157,7 +157,8 @@ emailAddress=		optional
 
 default_bits=		$ENV::CA_KEY_BITS
 default_md=		$ENV::CA_DIGEST_ALGORITHM
-x509_extensions=	v3_ca
+#x509_extensions=	ca_ext
+#req_extensions=	req_ext
 
 distinguished_name=	req_distinguished_name
 attributes=		req_attributes
@@ -168,16 +169,16 @@ attributes=		req_attributes
 [ req_attributes ]
 ## ======================================================================
 
-[ v3_ca ]
+[ ca_ext ]
 ## ======================================================================
 
 basicConstraints=	critical,CA:true
-nameConstraints=	critical,@v3_ca_name_constraints
+nameConstraints=	critical,@ca_name_constraints
 
 subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid:always,issuer
 
-[ v3_ca_name_constraints ]
+[ ca_name_constraints ]
 EOF
 
   for name_constraint in "${ca_name_constraints[@]}"; do
@@ -188,7 +189,7 @@ EOF
 
   cat >>"$ca_dir/etc/openssl.cnf" <<'EOF' || return 1
 
-[ v3_req ]
+[ req_ext ]
 ## ======================================================================
 
 basicConstraints=	critical,CA:false
@@ -232,7 +233,7 @@ EOF
     -new \
     -x509 \
     -subj "/CN=$ca_title" \
-    -extensions v3_ca \
+    -extensions ca_ext \
     -days "$CA_CERT_DAYS" \
     -nodes \
     -keyout "$ca_dir/private/CA.key" \
