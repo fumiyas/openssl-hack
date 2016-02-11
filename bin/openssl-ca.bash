@@ -1,7 +1,7 @@
 #!/bin/bash
 ##
 ## OpenSSL: Simple and Stupid CA implementation
-## Copyright (c) 2015 SATOH Fumiyasu @ OSS Technology Corp., Japan
+## Copyright (c) 2015-2016 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
 ##
@@ -29,7 +29,7 @@ CA_usage() {
 
   cat <<EOF
 Initialize:
-  $n init /srv/ca 'Demo CA (NO WARRANTY)'
+  $n init /srv/ca 'Demo CA (NO WARRANTY)' .example.jp
 
 Usage:
   cd /srv/ca
@@ -42,7 +42,7 @@ Usage:
 
 Files:
   etc/*				CA's configurations
-  private/CA.key		CA's key
+  private/CA.key		CA's private key
   certs/CA.crt			CA's certificate
   crl/CA.crl			CA's CRL
   csr/*.csr			Generated or received CSRs
@@ -52,13 +52,41 @@ EOF
 }
 
 CA_init() {
-  if [[ $# -lt 1 || $# -gt 2 ]]; then
-    CA_die "Usage: init CA_DIR [CA_TITLE]"
+  if [[ $# -lt 3 ]]; then
+    CA_die "Usage: init CA_DIR CA_TITLE NAME_CONSTRAINTS [...]"
     return 1
   fi
 
   local ca_dir="$1"; shift
   local ca_title="${1:-$CA_TITLE}"; ${1+shift}
+  local ca_name_constraints=()
+
+  local name name_type name_nodes name_constraint
+  for name in "$@"; do
+    name_type=""
+    if [[ $name =~ ^[0-9.]*$ ]]; then
+      name_type="IP"
+      name_nodes=(${name//./ })
+      if [[ ${#name_nodes[@]} != 4 ]]; then
+	name_type=""
+      else
+	for name_node in "${name_nodes[@]}"; do
+	  if [[ $name_node -gt 255 ]]; then
+	    name_type=""
+	    break
+	  fi
+	done
+      fi
+    fi
+
+    name="${name_type:-DNS} $name"
+
+    name_constraint="permitted;$name"
+    if [[ $name_type == "IP" ]]; then
+      name_constraint+="/255.255.255.255"
+    fi
+    ca_name_constraints+=("$name_constraint")
+  done
 
   mkdir -m 0755 "$ca_dir" || return 1
   mkdir -m 0750 "$ca_dir/private" || return 1
@@ -144,9 +172,21 @@ attributes=		req_attributes
 ## ======================================================================
 
 basicConstraints=	critical,CA:true
+nameConstraints=	critical,@v3_ca_name_constraints
 
 subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid:always,issuer
+
+[ v3_ca_name_constraints ]
+EOF
+
+  for name_constraint in "${ca_name_constraints[@]}"; do
+    echo "$name_constraint"
+  done |awk '{ print $1"."NR" = "$2 }' \
+  >>"$ca_dir/etc/openssl.cnf" \
+  ;
+
+  cat >>"$ca_dir/etc/openssl.cnf" <<'EOF' || return 1
 
 [ v3_req ]
 ## ======================================================================
