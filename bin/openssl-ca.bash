@@ -143,7 +143,7 @@ attributes=		req_attributes
 [ v3_ca ]
 ## ======================================================================
 
-basicConstraints=	CA:true
+basicConstraints=	critical,CA:true
 
 subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid:always,issuer
@@ -151,14 +151,14 @@ authorityKeyIdentifier=	keyid:always,issuer
 [ v3_req ]
 ## ======================================================================
 
-basicConstraints=	CA:false
+basicConstraints=	critical,CA:false
 
 keyUsage=		nonRepudiation, digitalSignature, keyEncipherment
 
 [ server_cert ]
 ## ======================================================================
 
-basicConstraints=	CA:false
+basicConstraints=	critical,CA:false
 nsComment=		$ENV::CA_TITLE Generated Server Certificate
 
 subjectKeyIdentifier=	hash
@@ -171,7 +171,7 @@ subjectAltName=		$ENV::CA_CERT_ALTNAMES
 [ client_cert ]
 ## ======================================================================
 
-basicConstraints=	CA:false
+basicConstraints=	critical,CA:false
 nsComment=		$ENV::CA_TITLE Generated Client Certificate
 
 subjectKeyIdentifier=	hash
