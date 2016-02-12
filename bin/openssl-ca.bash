@@ -61,6 +61,12 @@ CA_init() {
   local ca_title="${1:-$CA_TITLE}"; ${1+shift}
   local ca_name_constraints=()
 
+  if [[ $ca_dir == /* ]];then
+    local ca_dir_abs="$ca_dir"
+  else
+    local ca_dir_abs="$PWD/$ca_dir"
+  fi
+
   local name name_type name_nodes name_constraint
   for name in "$@"; do
     name_type=""
@@ -232,7 +238,7 @@ EOF
     -config "$ca_dir/etc/openssl.cnf" \
     -new \
     -x509 \
-    -subj "/CN=$ca_title" \
+    -subj "/host=$(uname -n)/L=${ca_dir_abs//\//\\\/}/CN=$ca_title" \
     -extensions ca_ext \
     -days "$CA_CERT_DAYS" \
     -nodes \
