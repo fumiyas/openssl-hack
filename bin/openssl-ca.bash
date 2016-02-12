@@ -254,6 +254,16 @@ CA_openssl() {
   ;
 }
 
+CA_openssl_ca() {
+  CA_openssl ca \
+    -utf8 \
+    -batch \
+    "$@" \
+  2> >(sed '/^Using configuration from etc\/openssl\.cnf$/d' 1>&2) \
+  || return 1 \
+  ;
+}
+
 CA_key() {
   if [[ $# -ne 1 ]]; then
     CA_die "Usage: key CN"
@@ -315,16 +325,6 @@ CA_csr() {
   }
 
   mv "$csr_tmp" "$csr" || return 1
-}
-
-CA_openssl_ca() {
-  CA_openssl ca \
-    -utf8 \
-    -batch \
-    "$@" \
-  2> >(sed '/^Using configuration from etc\/openssl\.cnf$/d' 1>&2) \
-  || return 1 \
-  ;
 }
 
 CA_sign() {
@@ -422,19 +422,25 @@ CA_crl() {
   mv "$crl_tmp" "$crl" || return 1
 }
 
-if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
+CA_command() {
   if [[ -z ${1-} ]]; then
     CA_usage
     exit 1
   fi
-  cmd_name="${1//-/_}"; shift
+
+  local cmd_name="${1//-/_}"; shift
   if ! PATH= type "CA_$cmd_name" >/dev/null 2>&1; then
     CA_die "Invalid command: $cmd_name"
   fi
 
   [[ $cmd_name != init && -f etc/CA.env ]] && . etc/CA.env >/dev/null 2>&1
+
   "CA_$cmd_name" "$@"
   exit "$?"
+}
+
+if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
+  CA_command "$@"
 fi
 
 return 0
