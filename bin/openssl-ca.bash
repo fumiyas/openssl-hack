@@ -28,7 +28,7 @@ CA_usage() {
   local n="${0##*/}"
 
   cat <<EOF
-Initialize:
+Initialization:
   $n init /srv/ca 'Demo CA (NO WARRANTY)' .example.jp
 
 Usage:
@@ -40,13 +40,13 @@ Usage:
   $n status www.example.jp
   $n crl
 
-Files:
+Files in CA directory:
   etc/*				CA's configurations
   private/CA.key		CA's private key
   certs/CA.crt			CA's certificate
   crl/CA.crl			CA's CRL
   csr/*.csr			Generated or received CSRs
-  private/*.key			Generated keys
+  private/*.key			Generated private keys
   signed/*.crt			Signed certificates
 EOF
 }
