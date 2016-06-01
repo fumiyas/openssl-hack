@@ -431,7 +431,7 @@ CA_crl() {
 CA_command() {
   if [[ -z ${1-} ]]; then
     CA_usage
-    exit 1
+    return 1
   fi
 
   local cmd_name="${1//-/_}"; shift
@@ -442,11 +442,12 @@ CA_command() {
   [[ $cmd_name != init && -f etc/CA.env ]] && . etc/CA.env >/dev/null 2>&1
 
   "CA_$cmd_name" "$@"
-  exit "$?"
+  return "$?"
 }
 
 if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
   CA_command "$@"
+  exit "$?"
 fi
 
 return 0
