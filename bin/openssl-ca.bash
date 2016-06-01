@@ -53,7 +53,7 @@ EOF
 
 CA_init() {
   if [[ $# -lt 3 ]]; then
-    CA_die "Usage: init CA_DIR CA_TITLE NAME_CONSTRAINTS [...]"
+    echo "Usage: init CA_DIR CA_TITLE NAME_CONSTRAINTS [...]"
     return 1
   fi
 
