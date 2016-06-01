@@ -19,12 +19,27 @@ export CA_CRL_DAYS="${CA_CRL_DAYS:-365}"
 
 export CA_CERT_ALTNAMES=""
 
-CA_die() {
-  echo "$0: ERROR: $*" 1>&2
-  exit "${2-1}"
+CA_caller_name() {
+  local caller="${FUNCNAME[2]}"
+
+  if [[ -z ${CA_MODULE_SOURCED+set} ]]; then
+    caller="${0##*/} ${caller#CA_}"
+  fi
+
+  echo "$caller"
 }
 
-CA_usage() {
+CA_error() {
+  echo "$(CA_caller_name): ERROR: $*" 1>&2
+}
+
+CA_function_usage() {
+  local args="$1"; shift
+
+  echo "Usage: $(CA_caller_name) $args"
+}
+
+CA_command_usage() {
   local n="${0##*/}"
 
   cat <<EOF
@@ -53,7 +68,8 @@ EOF
 
 CA_init() {
   if [[ $# -lt 3 ]]; then
-    echo "Usage: init CA_DIR CA_TITLE NAME_CONSTRAINTS [...]"
+    CA_error "Invalid argument(s)"
+    CA_function_usage "CA_DIR CA_TITLE NAME_CONSTRAINTS [...]"
     return 1
   fi
 
@@ -272,7 +288,8 @@ CA_openssl_ca() {
 
 CA_key() {
   if [[ $# -ne 1 ]]; then
-    CA_die "Usage: key CN"
+    CA_error "Invalid argument(s)"
+    CA_function_usage "CN"
     return 1
   fi
 
@@ -296,7 +313,8 @@ CA_key() {
 
 CA_csr() {
   if [[ $# -ne 1 ]]; then
-    CA_die "Usage: csr CN"
+    CA_error "Invalid argument(s)"
+    CA_function_usage "CN"
     return 1
   fi
 
@@ -335,7 +353,8 @@ CA_csr() {
 
 CA_sign() {
   if [[ $# -ne 1 ]]; then
-    CA_die "Usage: sign CN [ALTNAME ...]"
+    CA_error "Invalid argument(s)"
+    CA_function_usage "CN [ALTNAME ...]"
     return 1
   fi
 
@@ -430,13 +449,14 @@ CA_crl() {
 
 CA_command() {
   if [[ -z ${1-} ]]; then
-    CA_usage
+    CA_command_usage
     return 1
   fi
 
   local cmd_name="${1//-/_}"; shift
   if ! PATH= type "CA_$cmd_name" >/dev/null 2>&1; then
-    CA_die "Invalid command: $cmd_name"
+    CA_error "Invalid command: $cmd_name"
+    return 1
   fi
 
   [[ $cmd_name != init && -f etc/CA.env ]] && . etc/CA.env >/dev/null 2>&1
@@ -446,9 +466,12 @@ CA_command() {
 }
 
 if [[ ${#BASH_SOURCE[@]} -eq 1 ]]; then
+  unset CA_MODULE_SOURCED
   CA_command "$@"
   exit "$?"
 fi
+
+CA_MODULE_SOURCED="set"
 
 return 0
 
