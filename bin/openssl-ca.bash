@@ -394,7 +394,7 @@ CA_sign() {
     cn="$csr_or_cn"
     csr="$CA_DIR/csr/$cn.csr"
     if [[ ! -f "$csr" ]]; then
-      CA_csr "$cn" "$@" || return $?
+      CA_csr "$cn" || return $?
     fi
   fi
 
