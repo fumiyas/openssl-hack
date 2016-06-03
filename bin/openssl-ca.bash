@@ -399,6 +399,10 @@ CA_sign() {
   fi
 
   local cert="$CA_DIR/signed/$cn.crt"
+  if [[ -f $cert ]]; then
+    CA_error "Certificate already exists: $cert"
+    return 1
+  fi
 
   local altnames=""
   local altname
