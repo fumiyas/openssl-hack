@@ -278,7 +278,7 @@ EOF
     -config "$CA_DIR/etc/openssl.cnf" \
     -new \
     -x509 \
-    -subj "/host=$(uname -n)/L=${CA_DIR//\//\\\/}/CN=$ca_title" \
+    -subj "/host=$(uname -n)/SN=L=${CA_ARGV0//\//\\\/}/givenName=${CA_DIR//\//\\\/}/CN=$ca_title" \
     -extensions ca_ext \
     -days "$CA_CERT_DAYS" \
     -nodes \
