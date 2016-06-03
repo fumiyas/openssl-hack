@@ -11,8 +11,9 @@
 set -u
 set -C
 
+export CA_ARGV0="${CA_ARGV0:-$0}"
 export CA_DIR="${CA_DIR:-.}"
-export CA_TITLE="${CA_TITLE:-OpenSSL Simple and Stupid CA (${0##*/})}"
+export CA_TITLE="${CA_TITLE:-OpenSSL Simple and Stupid CA (${CA_ARGV0##*/})}"
 export CA_KEY_BITS="${CA_KEY_BITS:-4096}"
 export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
 export CA_CERT_DAYS="${CA_CERT_DAYS:-3650}"
@@ -24,7 +25,7 @@ CA_caller_name() {
   local caller="${FUNCNAME[2]}"
 
   if [[ -z ${CA_MODULE_SOURCED+set} ]]; then
-    caller="${0##*/} ${caller#CA_}"
+    caller="${CA_ARGV0##*/} ${caller#CA_}"
   fi
 
   echo "$caller"
@@ -41,19 +42,39 @@ CA_function_usage() {
 }
 
 CA_command_usage() {
-  local n="${0##*/}"
+  local n="${CA_ARGV0##*/}"
 
   cat <<EOF
 Initialization:
+EOF
+
+  if [[ $CA_ARGV0 == "$0" ]]; then
+    cat <<EOF
   CA_DIR=/srv/ca $n init 'Demo CA (NO WARRANTY)' .example.jp
     or
   $n init /srv/ca 'Demo CA (NO WARRANTY)' .example.jp
+EOF
+  else
+    cat <<EOF
+  $n init 'Demo CA (NO WARRANTY)' .example.jp
+EOF
+  fi
+
+  cat <<EOF
 
 Usage:
+EOF
+
+  if [[ $CA_ARGV0 == "$0" ]]; then
+    cat <<EOF
   export CA_DIR=/srv/ca
     or
   cd /srv/ca
     and then
+EOF
+  fi
+
+  cat <<EOF
   $n key www.example.jp
   $n csr www.example.jp
   $n sign www.example.jp [altname.example.com ...]
