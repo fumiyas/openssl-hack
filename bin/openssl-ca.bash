@@ -11,6 +11,7 @@
 set -u
 set -C
 
+export CA_DIR="${CA_DIR:-.}"
 export CA_TITLE="${CA_TITLE:-OpenSSL Simple and Stupid CA (${0##*/})}"
 export CA_KEY_BITS="${CA_KEY_BITS:-4096}"
 export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
@@ -44,10 +45,15 @@ CA_command_usage() {
 
   cat <<EOF
 Initialization:
+  CA_DIR=/srv/ca $n init 'Demo CA (NO WARRANTY)' .example.jp
+    or
   $n init /srv/ca 'Demo CA (NO WARRANTY)' .example.jp
 
 Usage:
+  export CA_DIR=/srv/ca
+    or
   cd /srv/ca
+    and then
   $n key www.example.jp
   $n csr www.example.jp
   $n sign www.example.jp [altname.example.com ...]
@@ -67,21 +73,17 @@ EOF
 }
 
 CA_init() {
-  if [[ $# -lt 3 ]]; then
+  if [[ $# -lt 2 ]]; then
     CA_error "Invalid argument(s)"
-    CA_function_usage "CA_DIR CA_TITLE NAME_CONSTRAINTS [...]"
+    CA_function_usage "[CA_DIR] CA_TITLE NAME_CONSTRAINTS [...]"
     return 1
   fi
 
-  local ca_dir="$1"; shift
+  if [[ $1 == /* ]];then
+    CA_DIR="$1"; shift
+  fi
   local ca_title="${1:-$CA_TITLE}"; ${1+shift}
   local ca_name_constraints=()
-
-  if [[ $ca_dir == /* ]];then
-    local ca_dir_abs="$ca_dir"
-  else
-    local ca_dir_abs="$PWD/$ca_dir"
-  fi
 
   local name name_type name_nodes name_constraint
   for name in "$@"; do
@@ -110,21 +112,21 @@ CA_init() {
     ca_name_constraints+=("$name_constraint")
   done
 
-  mkdir -m 0755 "$ca_dir" || return 1
-  mkdir -m 0750 "$ca_dir/private" || return 1
+  mkdir -m 0755 "$CA_DIR" || return 1
+  mkdir -m 0750 "$CA_DIR/private" || return 1
   mkdir -m 0755 \
-    "$ca_dir/etc" \
-    "$ca_dir/certs" \
-    "$ca_dir/signed" \
-    "$ca_dir/csr" \
-    "$ca_dir/crl" \
+    "$CA_DIR/etc" \
+    "$CA_DIR/certs" \
+    "$CA_DIR/signed" \
+    "$CA_DIR/csr" \
+    "$CA_DIR/crl" \
   || return 1 \
   ;
-  touch "$ca_dir/index.txt" || return 1
-  echo 100000 >"$ca_dir/serial.txt" || return 1
-  echo 00 >"$ca_dir/crlnumber.txt" || return 1
+  touch "$CA_DIR/index.txt" || return 1
+  echo 100000 >"$CA_DIR/serial.txt" || return 1
+  echo 00 >"$CA_DIR/crlnumber.txt" || return 1
 
-  cat >"$ca_dir/etc/CA.env" <<EOF || return 1
+  cat >"$CA_DIR/etc/CA.env" <<EOF || return 1
 CA_TITLE="$ca_title"
 CA_KEY_BITS="$CA_KEY_BITS"
 CA_DIGEST_ALGORITHM="$CA_DIGEST_ALGORITHM"
@@ -132,7 +134,7 @@ CA_CERT_DAYS="$CA_CERT_DAYS"
 CA_CRL_DAYS="$CA_CRL_DAYS"
 EOF
 
-  cat >"$ca_dir/etc/openssl.cnf" <<'EOF' || return 1
+  cat >"$CA_DIR/etc/openssl.cnf" <<'EOF' || return 1
 [ ca ]
 ## ======================================================================
 
@@ -141,7 +143,7 @@ default_ca=		CA_default
 [ CA_default ]
 ## ======================================================================
 
-dir=			.
+dir=			$ENV::CA_DIR
 
 private_key=		$dir/private/CA.key
 certificate=		$dir/certs/CA.crt
@@ -206,10 +208,10 @@ EOF
   for name_constraint in "${ca_name_constraints[@]}"; do
     echo "$name_constraint"
   done |awk '{ print $1"."NR" = "$2 }' \
-  >>"$ca_dir/etc/openssl.cnf" \
+  >>"$CA_DIR/etc/openssl.cnf" \
   ;
 
-  cat >>"$ca_dir/etc/openssl.cnf" <<'EOF' || return 1
+  cat >>"$CA_DIR/etc/openssl.cnf" <<'EOF' || return 1
 
 [ req_ext ]
 ## ======================================================================
@@ -251,19 +253,19 @@ authorityKeyIdentifier=	keyid:always,issuer:always
 EOF
 
   openssl req \
-    -config "$ca_dir/etc/openssl.cnf" \
+    -config "$CA_DIR/etc/openssl.cnf" \
     -new \
     -x509 \
-    -subj "/host=$(uname -n)/L=${ca_dir_abs//\//\\\/}/CN=$ca_title" \
+    -subj "/host=$(uname -n)/L=${CA_DIR//\//\\\/}/CN=$ca_title" \
     -extensions ca_ext \
     -days "$CA_CERT_DAYS" \
     -nodes \
-    -keyout "$ca_dir/private/CA.key" \
-    -out "$ca_dir/certs/CA.crt" \
+    -keyout "$CA_DIR/private/CA.key" \
+    -out "$CA_DIR/certs/CA.crt" \
   || return 1 \
   ;
-  chmod 0400 "$ca_dir/private/CA.key" || return 1
-  chmod 0444 "$ca_dir/certs/CA.crt" || return 1
+  chmod 0400 "$CA_DIR/private/CA.key" || return 1
+  chmod 0444 "$CA_DIR/certs/CA.crt" || return 1
 }
 
 CA_openssl() {
@@ -271,7 +273,7 @@ CA_openssl() {
 
   openssl \
     "$cmd" \
-    -config "etc/openssl.cnf" \
+    -config "$CA_DIR/etc/openssl.cnf" \
     "$@" \
   ;
 }
@@ -281,7 +283,7 @@ CA_openssl_ca() {
     -utf8 \
     -batch \
     "$@" \
-  2> >(sed '/^Using configuration from etc\/openssl\.cnf$/d' 1>&2) \
+  2> >(sed '/^Using configuration from .*\/etc\/openssl\.cnf$/d' 1>&2) \
   || return 1 \
   ;
 }
@@ -294,7 +296,7 @@ CA_key() {
   fi
 
   local cn="${1,,}"; shift
-  local key="private/$cn.key"
+  local key="$CA_DIR/private/$cn.key"
   local key_tmp="$key.$$.tmp"
 
   (
@@ -329,12 +331,12 @@ CA_csr() {
     cn="${cn,,}"
   else
     cn="$key_or_cn"
-    key="private/$cn.key"
+    key="$CA_DIR/private/$cn.key"
     if [[ ! -f "$key" ]]; then
       CA_key "$cn" || return $?
     fi
   fi
-  local csr="csr/$cn.csr"
+  local csr="$CA_DIR/csr/$cn.csr"
   local csr_tmp="$csr.$$.tmp"
 
   CA_openssl req \
@@ -352,7 +354,7 @@ CA_csr() {
 }
 
 CA_sign() {
-  if [[ $# -ne 1 ]]; then
+  if [[ $# -lt 1 ]]; then
     CA_error "Invalid argument(s)"
     CA_function_usage "CN [ALTNAME ...]"
     return 1
@@ -369,13 +371,13 @@ CA_sign() {
     cn="${cn,,}"
   else
     cn="$csr_or_cn"
-    csr="csr/$cn.csr"
+    csr="$CA_DIR/csr/$cn.csr"
     if [[ ! -f "$csr" ]]; then
       CA_csr "$cn" "$@" || return $?
     fi
   fi
 
-  local cert="signed/$cn.crt"
+  local cert="$CA_DIR/signed/$cn.crt"
 
   local altnames=""
   local altname
@@ -402,7 +404,7 @@ CA_status() {
     if [[ -f $serial_or_cert_or_cn ]]; then
       cert="$serial_or_cert_or_cn"
     else
-      cert="signed/$serial_or_cert_or_cn.crt"
+      cert="$CA_DIR/signed/$serial_or_cert_or_cn.crt"
     fi
     serial=$(openssl x509 -serial -noout <"$cert") || return 1
     serial="${serial#*=}"
@@ -424,7 +426,7 @@ CA_revoke() {
     cn="${cn,,}"
   else
     cn="$cert_or_cn"
-    cert="signed/$cn.crt"
+    cert="$CA_DIR/signed/$cn.crt"
   fi
 
   CA_openssl_ca \
@@ -433,7 +435,7 @@ CA_revoke() {
 }
 
 CA_crl() {
-  local crl="crl/CA.crl"
+  local crl="$CA_DIR/crl/CA.crl"
   local crl_tmp="$crl.$$.tmp"
 
   CA_openssl_ca \
