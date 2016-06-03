@@ -141,6 +141,7 @@ CA_init() {
     "$CA_DIR/signed" \
     "$CA_DIR/csr" \
     "$CA_DIR/crl" \
+    "$CA_DIR/revoked" \
   || return 1 \
   ;
   touch "$CA_DIR/index.txt" || return 1
@@ -291,10 +292,15 @@ EOF
 
 CA_openssl() {
   local cmd="$1"; shift
+  local args=()
+
+  if [[ $cmd != x509 ]]; then
+    args+=(-config "$CA_DIR/etc/openssl.cnf")
+  fi
 
   openssl \
     "$cmd" \
-    -config "$CA_DIR/etc/openssl.cnf" \
+    ${args[@]+"${args[@]}"} \
     "$@" \
   ;
 }
@@ -307,6 +313,35 @@ CA_openssl_ca() {
   2> >(sed '/^Using configuration from .*\/etc\/openssl\.cnf$/d' 1>&2) \
   || return 1 \
   ;
+}
+
+CA_serial() {
+  local serial_or_cert_or_cn="$1"; shift
+
+  local serial
+  if [[ -f signed/$serial_or_cert_or_cn.pem ]]; then
+    serial="$serial_or_cert_or_cn"
+  else
+    local cert
+    if [[ -f $serial_or_cert_or_cn ]]; then
+      cert="$serial_or_cert_or_cn"
+    else
+      cert="$CA_DIR/signed/$serial_or_cert_or_cn.crt"
+      if [[ ! -f $cert ]]; then
+	cert="$CA_DIR/revoked/$serial_or_cert_or_cn.crt"
+      fi
+    fi
+
+    if [[ ! -f "$cert" ]]; then
+      CA_error "No certificate found: $serial_or_cert_or_cn"
+      return 1
+    fi
+
+    serial=$(CA_openssl x509 -in "$cert" -serial -noout) || return 1
+    serial="${serial#*=}"
+  fi
+
+  echo "$serial"
 }
 
 CA_key() {
@@ -416,23 +451,25 @@ CA_sign() {
     -in "$csr" \
     -out "$cert" \
   ;
+  local rc=$?
+  if [[ $rc -ne 0 ]]; then
+    rm -f "$cert"
+    return $rc
+  fi
+
+  local serial
+  serial=$(CA_serial "$cert")
+  ln -sf "../signed/$serial.pem" "$cert"
 }
 
 CA_status() {
   local serial_or_cert_or_cn="$1"; shift
 
   local serial
-  if [[ -f signed/$serial_or_cert_or_cn.pem ]]; then
-    serial="$serial_or_cert_or_cn"
-  else
-    local cert
-    if [[ -f $serial_or_cert_or_cn ]]; then
-      cert="$serial_or_cert_or_cn"
-    else
-      cert="$CA_DIR/signed/$serial_or_cert_or_cn.crt"
-    fi
-    serial=$(openssl x509 -serial -noout <"$cert") || return 1
-    serial="${serial#*=}"
+  serial=$(CA_serial "$serial_or_cert_or_cn")
+  local rc=$?
+  if [[ $rc -ne 0 ]]; then
+    return $rc
   fi
 
   CA_openssl_ca \
@@ -456,7 +493,10 @@ CA_revoke() {
 
   CA_openssl_ca \
     -revoke "$cert" \
+  || return $? \
   ;
+
+  mv "$cert" "$CA_DIR/revoked/"
 }
 
 CA_crl() {
