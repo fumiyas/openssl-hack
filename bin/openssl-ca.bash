@@ -531,7 +531,9 @@ CA_command() {
     return 1
   fi
 
-  [[ $cmd_name != init && -f etc/CA.env ]] && . etc/CA.env >/dev/null 2>&1
+  if [[ $cmd_name != init && -f $CA_DIR/etc/CA.env ]]; then
+    . "$CA_DIR/etc/CA.env" >/dev/null 2>&1
+  fi
 
   "CA_$cmd_name" "$@"
   return "$?"
