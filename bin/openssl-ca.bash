@@ -491,6 +491,11 @@ CA_revoke() {
     cert="$CA_DIR/signed/$cn.crt"
   fi
 
+  if [[ ! -f "$cert" ]]; then
+    CA_error "No valid certificate found: $cert_or_cn"
+    return 1
+  fi
+
   CA_openssl_ca \
     -revoke "$cert" \
   || return $? \
