@@ -77,7 +77,7 @@ EOF
   cat <<EOF
   $n key www.example.jp
   $n csr www.example.jp
-  $n sign www.example.jp [altname.example.com ...]
+  $n sign www.example.jp [altname.example.jp ...]
   $n revoke www.example.jp
   $n status www.example.jp
   $n crl
