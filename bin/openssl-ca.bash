@@ -90,6 +90,7 @@ Files in CA directory:
   csr/*.csr			Generated or received CSRs
   private/*.key			Generated private keys
   signed/*.crt			Signed certificates
+  revoked/*.crt			Revoked certificates
 EOF
 }
 
