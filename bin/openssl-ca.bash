@@ -50,13 +50,13 @@ EOF
 
   if [[ $CA_ARGV0 == "$0" ]]; then
     cat <<EOF
-  CA_DIR=/srv/ca $n init 'Demo CA (NO WARRANTY)' .example.jp
+  CA_DIR=/srv/ca $n init 'Demo CA (NO WARRANTY)' example.jp
     or
-  $n init /srv/ca 'Demo CA (NO WARRANTY)' .example.jp
+  $n init /srv/ca 'Demo CA (NO WARRANTY)' example.jp
 EOF
   else
     cat <<EOF
-  $n init 'Demo CA (NO WARRANTY)' .example.jp
+  $n init 'Demo CA (NO WARRANTY)' example.jp
 EOF
   fi
 
@@ -125,7 +125,12 @@ CA_init() {
       fi
     fi
 
-    name="${name_type:-DNS} $name"
+    if [[ -n $name_type ]]; then
+      name="$name_type $name"
+    else
+      ## Remove a leading "." if any
+      name="DNS ${name#.}"
+    fi
 
     name_constraint="permitted;$name"
     if [[ $name_type == "IP" ]]; then
