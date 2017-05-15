@@ -139,6 +139,11 @@ CA_init() {
     ca_name_constraints+=("$name_constraint")
   done
 
+  local ca_host=$(uname -n)
+  local ca_sn="${CA_ARGV0//\//.}"; ca_sn="${ca_sn#.}"
+  local ca_gn="${ca_title//\//.}"; ca_gn="${ca_gn#.}"
+  local ca_cn="${CA_DIR//\//.}"; ca_cn="${ca_cn#.}"
+
   mkdir -m 0755 "$CA_DIR" || return 1
   mkdir -m 0750 "$CA_DIR/private" || return 1
   mkdir -m 0755 \
@@ -284,7 +289,7 @@ EOF
     -config "$CA_DIR/etc/openssl.cnf" \
     -new \
     -x509 \
-    -subj "/host=$(uname -n)/SN=${CA_ARGV0//\//:}/givenName=${CA_DIR//\//:}/CN=$ca_title" \
+    -subj "/host=$ca_host/SN=$ca_sn/givenName=$ca_gn/CN=$ca_cn" \
     -extensions ca_ext \
     -days "$CA_CERT_DAYS" \
     -nodes \
