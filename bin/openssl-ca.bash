@@ -95,15 +95,15 @@ EOF
 }
 
 CA_init() {
+  if [[ ${1-} == /* ]];then
+    CA_DIR="$1"; shift
+  fi
   if [[ $# -lt 2 ]]; then
     CA_error "Invalid argument(s)"
-    CA_function_usage "[CA_DIR] CA_TITLE NAME_CONSTRAINTS [...]"
+    CA_function_usage "[/CA_DIR] CA_TITLE NAME_CONSTRAINTS [...]"
     return 1
   fi
 
-  if [[ $1 == /* ]];then
-    CA_DIR="$1"; shift
-  fi
   local ca_title="${1:-$CA_TITLE}"; ${1+shift}
   local ca_name_constraints=()
 
