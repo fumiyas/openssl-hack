@@ -1,7 +1,7 @@
 #!/bin/bash
 ##
 ## OpenSSL: Simple and Stupid CA implementation
-## Copyright (c) 2015-2016 SATOH Fumiyasu @ OSS Technology Corp., Japan
+## Copyright (c) 2015-2017 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
 ##
