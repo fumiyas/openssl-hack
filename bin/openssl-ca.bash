@@ -13,7 +13,7 @@ set -C
 
 export CA_ARGV0="${CA_ARGV0:-$0}"
 export CA_DIR="${CA_DIR:-.}"
-export CA_TITLE="${CA_TITLE:-OpenSSL Simple and Stupid CA (${CA_ARGV0##*/})}"
+export CA_TITLE="${CA_TITLE:-OpenSSL Simple and Stupid CA (NO WARRANTY)}"
 export CA_KEY_BITS="${CA_KEY_BITS:-4096}"
 export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
 export CA_CERT_DAYS="${CA_CERT_DAYS:-3650}"
