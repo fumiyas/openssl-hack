@@ -19,7 +19,7 @@
 ##
 
 set -u
-set -o pipefail
+set -o pipefail || exit $?
 umask 0077
 
 run() {
@@ -32,6 +32,21 @@ run() {
 rsa_bits="4096"
 sha_bits="384"
 crt_days="3650"
+
+usage="\
+Usage: $0 NAME [ALTERNATIVE NAMES ...]
+
+Examples:
+  \$ $0 www.example.jp
+  \$ $0 ldap.example.com master.ldap.example.com slave.ldap.example.com
+"
+
+## ----------------------------------------------------------------------
+
+if  [[ $# -lt 1 ]]; then
+  echo -n "$usage"
+  exit 1
+fi
 
 cn="$1"; shift
 
