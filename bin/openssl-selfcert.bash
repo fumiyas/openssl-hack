@@ -1,7 +1,7 @@
 #!/bin/bash
 ##
 ## OpenSSL: Create a self-signed certificate with X.509 extensions
-## Copyright (c) 2015-2016 SATOH Fumiyasu @ OSS Technology Corp., Japan
+## Copyright (c) 2015-2018 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
 ##
