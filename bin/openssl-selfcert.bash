@@ -40,7 +40,7 @@ cn="$1"; shift
 altnames=()
 nameconstraints=()
 
-## CN should be in subjectAltNames too (RFC 6125)
+## All identity names MUST be in subjectAltNames (RFC 6125)
 for altname in "$cn" "$@"; do
   altname_type=""
   if [[ $altname =~ ^[0-9.]*$ ]]; then
@@ -126,4 +126,3 @@ chmod -w "$cn.crt" "$cn.key" || exit 1
 ls -l "$cn.crt" "$cn.key" || exit 1
 
 exit 0
-

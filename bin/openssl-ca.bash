@@ -452,6 +452,7 @@ CA_sign() {
 
   local altnames=""
   local altname
+  ## All identity names MUST be in subjectAltNames (RFC 6125)
   for altname in "$cn" "$@"; do
     ## FIXME: Support IP:192.168.0.1 and so on
     altnames="${altnames:+$altnames,}DNS:$altname"
@@ -559,4 +560,3 @@ fi
 CA_MODULE_SOURCED="set"
 
 return 0
-
