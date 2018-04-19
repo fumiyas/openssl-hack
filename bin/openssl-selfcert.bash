@@ -133,11 +133,11 @@ done
   -out "$cn.crt" \
   -keyout "$cn.key" \
   -nodes \
-|| exit 1
+|| exit $?
 
 ## ----------------------------------------------------------------------
 
-chmod -w "$cn.crt" "$cn.key" || exit 1
-ls -l "$cn.crt" "$cn.key" || exit 1
+chmod -w "$cn.crt" "$cn.key" || exit $?
+ls -l "$cn.crt" "$cn.key" || exit $?
 
 exit 0

@@ -144,8 +144,8 @@ CA_init() {
   local ca_gn="${ca_title//\//.}"; ca_gn="${ca_gn#.}"
   local ca_cn="${CA_DIR//\//.}"; ca_cn="${ca_cn#.}"
 
-  mkdir -m 0755 "$CA_DIR" || return 1
-  mkdir -m 0750 "$CA_DIR/private" || return 1
+  mkdir -m 0755 "$CA_DIR" || return $?
+  mkdir -m 0750 "$CA_DIR/private" || return $?
   mkdir -m 0755 \
     "$CA_DIR/etc" \
     "$CA_DIR/certs" \
@@ -153,14 +153,14 @@ CA_init() {
     "$CA_DIR/csr" \
     "$CA_DIR/crl" \
     "$CA_DIR/revoked" \
-  || return 1 \
+  || return $? \
   ;
-  touch "$CA_DIR/index.txt" || return 1
-  touch "$CA_DIR/index.txt.attr" || return 1
-  echo 100000 >"$CA_DIR/serial.txt" || return 1
-  echo 00 >"$CA_DIR/crlnumber.txt" || return 1
+  touch "$CA_DIR/index.txt" || return $?
+  touch "$CA_DIR/index.txt.attr" || return $?
+  echo 100000 >"$CA_DIR/serial.txt" || return $?
+  echo 00 >"$CA_DIR/crlnumber.txt" || return $?
 
-  cat >"$CA_DIR/etc/CA.env" <<EOF || return 1
+  cat >"$CA_DIR/etc/CA.env" <<EOF || return $?
 CA_TITLE="$ca_title"
 CA_KEY_BITS="$CA_KEY_BITS"
 CA_DIGEST_ALGORITHM="$CA_DIGEST_ALGORITHM"
@@ -168,7 +168,7 @@ CA_CERT_DAYS="$CA_CERT_DAYS"
 CA_CRL_DAYS="$CA_CRL_DAYS"
 EOF
 
-  cat >"$CA_DIR/etc/openssl.cnf" <<'EOF' || return 1
+  cat >"$CA_DIR/etc/openssl.cnf" <<'EOF' || return $?
 [ ca ]
 ## ======================================================================
 
@@ -245,7 +245,7 @@ EOF
   >>"$CA_DIR/etc/openssl.cnf" \
   ;
 
-  cat >>"$CA_DIR/etc/openssl.cnf" <<'EOF' || return 1
+  cat >>"$CA_DIR/etc/openssl.cnf" <<'EOF' || return $?
 
 [ req_ext ]
 ## ======================================================================
@@ -296,10 +296,10 @@ EOF
     -nodes \
     -keyout "$CA_DIR/private/CA.key" \
     -out "$CA_DIR/certs/CA.crt" \
-  || return 1 \
+  || return $? \
   ;
-  chmod 0400 "$CA_DIR/private/CA.key" || return 1
-  chmod 0444 "$CA_DIR/certs/CA.crt" || return 1
+  chmod 0400 "$CA_DIR/private/CA.key" || return $?
+  chmod 0444 "$CA_DIR/certs/CA.crt" || return $?
 }
 
 CA_openssl() {
@@ -323,7 +323,7 @@ CA_openssl_ca() {
     -batch \
     "$@" \
   2> >(sed '/^Using configuration from .*\/etc\/openssl\.cnf$/d' 1>&2) \
-  || return 1 \
+  || return $? \
   ;
 }
 
@@ -349,7 +349,7 @@ CA_serial() {
       return 1
     fi
 
-    serial=$(CA_openssl x509 -in "$cert" -serial -noout) || return 1
+    serial=$(CA_openssl x509 -in "$cert" -serial -noout) || return $?
     serial="${serial#*=}"
   fi
 
@@ -374,11 +374,12 @@ CA_key() {
     >"$key_tmp" \
     ;
   ) || {
+    local rc=$?
     rm -f "$key_tmp"
-    return 1
+    return $rc
   }
 
-  mv "$key_tmp" "$key" || return 1
+  mv "$key_tmp" "$key" || return $?
 }
 
 CA_csr() {
@@ -414,11 +415,12 @@ CA_csr() {
     -subj "/CN=$cn" \
   >"$csr_tmp" \
   || {
+    local rc=$?
     rm -f "$csr_tmp"
-    return 1
+    return $rc
   }
 
-  mv "$csr_tmp" "$csr" || return 1
+  mv "$csr_tmp" "$csr" || return $?
 }
 
 CA_sign() {
@@ -525,11 +527,12 @@ CA_crl() {
     -gencrl \
   >"$crl_tmp" \
   || {
+    local rc=$?
     rm -f "$crl_tmp"
-    return 1
+    return $rc
   }
 
-  mv "$crl_tmp" "$crl" || return 1
+  mv "$crl_tmp" "$crl" || return $?
 }
 
 CA_command() {
