@@ -156,6 +156,7 @@ CA_init() {
   || return 1 \
   ;
   touch "$CA_DIR/index.txt" || return 1
+  touch "$CA_DIR/index.txt.attr" || return 1
   echo 100000 >"$CA_DIR/serial.txt" || return 1
   echo 00 >"$CA_DIR/crlnumber.txt" || return 1
 
