@@ -195,7 +195,7 @@ RANDFILE=		$dir/private/random
 default_days=		$ENV::CA_CERT_DAYS
 default_crl_days=	$ENV::CA_CRL_DAYS
 default_md=		$ENV::CA_DIGEST_ALGORITHM
-x509_extensions=	server_cert
+#x509_extensions=	server_cert_ext
 
 policy=			policy_anything
 
@@ -254,7 +254,7 @@ basicConstraints=	critical,CA:false
 
 keyUsage=		nonRepudiation, digitalSignature, keyEncipherment
 
-[ server_cert ]
+[ server_cert_ext ]
 ## ======================================================================
 
 basicConstraints=	critical,CA:false
@@ -267,7 +267,7 @@ extendedKeyUsage=	serverAuth
 
 subjectAltName=		$ENV::CA_CERT_ALTNAMES
 
-[ client_cert ]
+[ client_cert_ext ]
 ## ======================================================================
 
 basicConstraints=	critical,CA:false
@@ -424,6 +424,21 @@ CA_csr() {
 }
 
 CA_sign() {
+  local cert_type="server"
+  if [[ $1 == --* ]]; then
+    cert_type="${1#--}"
+    shift
+  fi
+  case "$cert_type" in
+  server|client)
+    ## OK
+    ;;
+  *)
+    CA_error "Invalid certificate type: $cert_type"
+    return 1
+    ;;
+  esac
+
   if [[ $# -lt 1 ]]; then
     CA_error "Invalid argument(s)"
     CA_function_usage "CN [ALTNAME ...]"
@@ -465,6 +480,7 @@ CA_sign() {
   CA_openssl_ca \
     -in "$csr" \
     -out "$cert" \
+    -extensions "${cert_type}_cert_ext" \
   ;
   local rc=$?
   if [[ $rc -ne 0 ]]; then
