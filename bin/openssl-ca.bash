@@ -236,6 +236,7 @@ nameConstraints=	critical,@ca_name_constraints
 
 subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid:always,issuer
+keyUsage=		keyCertSign, cRLSign
 
 [ ca_name_constraints ]
 EOF
