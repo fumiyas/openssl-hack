@@ -108,6 +108,7 @@ CA_init() {
   local ca_name_constraints=()
 
   local name name_type name_nodes name_constraint
+  ## FIXME: Support e-mail address
   for name in "$@"; do
     name_type=""
     if [[ $name =~ ^[0-9.]*$ ]]; then
