@@ -31,6 +31,28 @@ CA_caller_name() {
   echo "$caller"
 }
 
+CA_name_to_altname() {
+  local name="$1"; shift
+  local name_l="${name,,}"
+  local type
+
+  ## FIXME: Support URI:..., dirName:...
+  if  [[ $name_l =~ ^((([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+\.)+(([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+$ ]]; then
+    type='DNS'
+  elif  [[ $name_l =~ ^[^@]+@((([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+\.)+(([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+$ ]]; then
+    type='email'
+  elif  [[ $name =~ ^(([12]?[0-9])?[0-9]\.){3}([12]?[0-9])?[0-9]$ ]]; then
+    ## FIXME: Restrict pattern to reject 10.0.0.299 and so on
+    type='IP'
+  elif  [[ $name_l =~ ^[a-z_][a-z0-9\-_]*=. ]]; then
+    type='RID'
+  else
+    type='otherName'
+  fi
+
+  echo "$type:$name"
+}
+
 CA_error() {
   echo "$(CA_caller_name): ERROR: $*" 1>&2
 }
@@ -470,12 +492,11 @@ CA_sign() {
     return 1
   fi
 
-  local altnames=""
+  local altnames="$(CA_name_to_altname "$cn")"
   local altname
   ## All identity names MUST be in subjectAltNames (RFC 6125)
-  for altname in "$cn" "$@"; do
-    ## FIXME: Support IP:192.168.0.1 and so on
-    altnames="${altnames:+$altnames,}DNS:$altname"
+  for altname in "$@"; do
+    altnames+=",$(CA_name_to_altname "$altname")"
   done
 
   CA_CERT_ALTNAMES="$altnames" \
