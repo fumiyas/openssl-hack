@@ -37,15 +37,14 @@ CA_name_to_altname() {
   local type
 
   ## FIXME: Support URI:..., dirName:...
-  if  [[ $name_l =~ ^((([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+\.)+(([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+$ ]]; then
-    type='DNS'
-  elif  [[ $name_l =~ ^[^@]+@((([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+\.)+(([a-z0-9][a-z0-9\-]*)+[a-z0-9]|[a-z])+$ ]]; then
-    type='email'
-  elif  [[ $name =~ ^(([12]?[0-9])?[0-9]\.){3}([12]?[0-9])?[0-9]$ ]]; then
+  if  [[ $name =~ ^(([12]?[0-9])?[0-9]\.){3}([12]?[0-9])?[0-9]$ ]]; then
     ## FIXME: Restrict pattern to reject 10.0.0.299 and so on
+    ## FIXME: Support IPv6 addresses
     type='IP'
-  elif  [[ $name_l =~ ^[a-z_][a-z0-9\-_]*=. ]]; then
-    type='RID'
+  elif  [[ $name_l =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+    type='DNS'
+  elif  [[ $name_l =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+    type='email'
   else
     type='otherName'
   fi
