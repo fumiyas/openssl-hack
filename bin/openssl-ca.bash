@@ -34,6 +34,7 @@ CA_CANONICAL_CASE_ATTRIBUTE_NAMES=(
   SN	surname
 	title
 	serialNumber
+	host
   DC	domainComponent
   OU	organizationalUnitName
   O	organizationName
@@ -262,6 +263,16 @@ CA_init() {
   local ca_gn="${ca_title//\//.}"; ca_gn="${ca_gn#.}"
   local ca_cn="${CA_DIR//\//.}"; ca_cn="${ca_cn#.}"
 
+  local ca_subject attr attr_oneline
+  for attr in "host=$ca_host" "SN=$ca_sn" "GN=$ca_gn" "CN=$ca_cn"; do
+    attr_oneline="$(CA_escape_attribute_oneline "$attr")"
+    if [[ -z $attr_oneline ]]; then
+      CA_error "Unknown attribute name: $attr"
+      return 1
+    fi
+    ca_subject+="/$attr_oneline"
+  done
+
   mkdir -m 0755 "$CA_DIR" || return $?
   mkdir -m 0750 "$CA_DIR/private" || return $?
   mkdir -m 0755 \
@@ -421,7 +432,7 @@ EOF
     -config "$CA_DIR/etc/openssl.cnf" \
     -new \
     -x509 \
-    -subj "/host=$ca_host/SN=$ca_sn/givenName=$ca_gn/CN=$ca_cn" \
+    -subj "$ca_subject" \
     -extensions ca_ext \
     -days "$CA_CERT_DAYS" \
     -nodes \
