@@ -688,7 +688,7 @@ CA_sign() {
   fi
 
   local serial
-  serial=$(CA_serial "$cert_file")
+  serial=$(CA_serial "$cert_file") || return $?
   ln -sf "../signed/$serial.pem" "$cert_file"
 }
 
@@ -696,11 +696,7 @@ CA_status() {
   local serial_or_cert_or_cn="$1"; shift
 
   local serial
-  serial=$(CA_serial "$serial_or_cert_or_cn")
-  local rc=$?
-  if [[ $rc -ne 0 ]]; then
-    return $rc
-  fi
+  serial=$(CA_serial "$serial_or_cert_or_cn") || return $?
 
   CA_openssl_ca \
     -status "$serial" \
