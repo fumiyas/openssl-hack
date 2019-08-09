@@ -19,7 +19,43 @@ export CA_DIGEST_ALGORITHM="${CA_DIGEST_ALGORITHM:-sha384}"
 export CA_CERT_DAYS="${CA_CERT_DAYS:-3650}"
 export CA_CRL_DAYS="${CA_CRL_DAYS:-365}"
 
+export CA_REQ_ALTNAMES=""
 export CA_CERT_ALTNAMES=""
+
+## ======================================================================
+
+## From nid_objs[] in openssl-1.1.1/crypto/objects/obj_dat.h
+CA_CANONICAL_CASE_ATTRIBUTE_NAMES=(
+  CN	commonName
+  UID	userId
+  mail	rfc822Mailbox
+	emailAddress
+  GN	givenName
+  SN	surname
+	title
+	serialNumber
+  DC	domainComponent
+  OU	organizationalUnitName
+  O	organizationName
+  L	localityName
+  ST	stateOrProvinceName
+  C	countryName
+)
+
+typeset -A CA_CANONICAL_CASE_ATTRIBUTE_NAMES_BY_LOWER_NAME
+
+_CA_prepare() {
+  local name name_lower
+  for name in "${CA_CANONICAL_CASE_ATTRIBUTE_NAMES[@]}"; do
+    CA_CANONICAL_CASE_ATTRIBUTE_NAMES_BY_LOWER_NAME[${name,,}]="$name"
+  done
+
+  return 0
+}
+
+_CA_prepare || return $?
+
+## ======================================================================
 
 CA_caller_name() {
   local caller="${FUNCNAME[2]}"
@@ -31,29 +67,12 @@ CA_caller_name() {
   echo "$caller"
 }
 
-CA_name_to_altname() {
-  local name="$1"; shift
-  local name_l="${name,,}"
-  local type
-
-  ## FIXME: Support URI:..., dirName:...
-  if  [[ $name =~ ^(([12]?[0-9])?[0-9]\.){3}([12]?[0-9])?[0-9]$ ]]; then
-    ## FIXME: Restrict pattern to reject 10.0.0.299 and so on
-    ## FIXME: Support IPv6 addresses
-    type='IP'
-  elif  [[ $name_l =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
-    type='DNS'
-  elif  [[ $name_l =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
-    type='email'
-  else
-    type='otherName'
-  fi
-
-  echo "$type:$name"
-}
-
 CA_error() {
   echo "$(CA_caller_name): ERROR: $*" 1>&2
+}
+
+CA_warn() {
+  echo "$(CA_caller_name): WARNING: $*" 1>&2
 }
 
 CA_function_usage() {
@@ -97,8 +116,8 @@ EOF
 
   cat <<EOF
   $n key www.example.jp
-  $n csr www.example.jp
-  $n sign www.example.jp [altname.example.jp ...]
+  $n csr www.example.jp [altname.example.jp ...] [uid=foo ...]
+  $n sign www.example.jp [altname.example.jp ...] [uid=foo ...]
   $n revoke www.example.jp
   $n status www.example.jp
   $n crl
@@ -114,6 +133,83 @@ Files in CA directory:
   revoked/*.crt			Revoked certificates
 EOF
 }
+
+CA_quote_shell() {
+  local sq="'"
+  local str="${1//$sq/$sq\\$sq$sq}"; shift
+
+  echo "$sq$str$sq"
+}
+
+## openssl(1) recognizes attribute names case-sensitively in subjects
+CA_canonicalize_attribute_name() {
+  local name_lower="${1,,}"; shift
+
+  echo "${CA_CANONICAL_CASE_ATTRIBUTE_NAMES_BY_LOWER_NAME[$name_lower]-}"
+}
+
+## Escape an attribute value for OpenSSL oneline format
+## (/type0=value0/type1=value1/type2=...)
+CA_escape_value_oneline() {
+  local value="${1//\\/\\\\}"; shift
+
+  value="${value//\//\\\/}"
+  value="${value//+/\\+}"
+
+  echo "$value"
+}
+
+## Escape an attribute name and value for OpenSSL oneline format
+## (/type0=value0/type1=value1/type2=...)
+CA_escape_attribute_oneline() {
+  local attr="$1"; shift
+
+  local name="${attr%%=*}"
+  local value="${attr#*=}"
+
+  local name_canon="$(CA_canonicalize_attribute_name "$name")"
+  if [[ -z $name_canon ]]; then
+    return 1
+  fi
+
+  echo "$name_canon=$(CA_escape_value_oneline "$value")"
+}
+
+CA_type_of_value() {
+  local value="$1"; shift
+  local value_lower="${value,,}"
+  local type
+
+  if  [[ $value_lower =~ ^[a-z_][a-z_0-9\-]*(\+[a-z_][a-z_0-9\-]*)*:// ]]; then
+    type='URI'
+  elif  [[ $value =~ ^(([12]?[0-9])?[0-9]\.){3}([12]?[0-9])?[0-9]$ ]]; then
+    ## FIXME: Restrict pattern to reject 10.0.0.299 and so on
+    ## FIXME: Support IPv6 addresses
+    type='IP'
+  elif  [[ $value_lower =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+    type='DNS'
+  elif  [[ $value_lower =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+    type='email'
+  else
+    return 1
+  fi
+
+  echo "$type"
+}
+
+CA_name_to_typed_altname() {
+  local value="$1"; shift
+
+  local type="$(CA_type_of_value "$value")"
+  if [[ -z $type ]]; then
+    return 1
+  fi
+
+  ## FIXME: Escape $value
+  echo "$type:$value"
+}
+
+## ======================================================================
 
 CA_init() {
   if [[ ${1-} == /* ]];then
@@ -224,13 +320,22 @@ policy=			policy_anything
 [ policy_anything ]
 ## ======================================================================
 
-countryName=		optional
-stateOrProvinceName=	optional
-localityName=		optional
-organizationName=	optional
-organizationalUnitName=	optional
 commonName=		supplied
+
+userId=			optional
+mail=			optional
 emailAddress=		optional
+
+givenName=		optional
+surname=		optional
+
+domainComponent=	optional
+
+organizationalUnitName=	optional
+organizationName=	optional
+localityName=		optional
+stateOrProvinceName=	optional
+countryName=		optional
 
 [ req ]
 ## ======================================================================
@@ -238,7 +343,7 @@ emailAddress=		optional
 default_bits=		$ENV::CA_KEY_BITS
 default_md=		$ENV::CA_DIGEST_ALGORITHM
 #x509_extensions=	ca_ext
-#req_extensions=	req_ext
+req_extensions=		req_ext
 
 distinguished_name=	req_distinguished_name
 attributes=		req_attributes
@@ -252,7 +357,7 @@ attributes=		req_attributes
 [ ca_ext ]
 ## ======================================================================
 
-basicConstraints=	critical,CA:true
+basicConstraints=	critical,CA:true,pathlen:1
 nameConstraints=	critical,@ca_name_constraints
 
 subjectKeyIdentifier=	hash
@@ -276,6 +381,8 @@ EOF
 basicConstraints=	critical,CA:false
 
 keyUsage=		nonRepudiation, digitalSignature, keyEncipherment
+
+subjectAltName=		$ENV::CA_REQ_ALTNAMES
 
 [ server_cert_ext ]
 ## ======================================================================
@@ -309,6 +416,7 @@ subjectAltName=		$ENV::CA_CERT_ALTNAMES
 authorityKeyIdentifier=	keyid:always,issuer:always
 EOF
 
+  CA_REQ_ALTNAMES="DNS:$ca_cn" \
   openssl req \
     -config "$CA_DIR/etc/openssl.cnf" \
     -new \
@@ -344,6 +452,7 @@ CA_openssl_ca() {
   CA_openssl ca \
     -utf8 \
     -batch \
+    -multivalue-rdn \
     "$@" \
   2> >(sed '/^Using configuration from .*\/etc\/openssl\.cnf$/d' 1>&2) \
   || return $? \
@@ -387,8 +496,8 @@ CA_key() {
   fi
 
   local cn="${1,,}"; shift
-  local key="$CA_DIR/private/$cn.key"
-  local key_tmp="$key.$$.tmp"
+  local key_file="$CA_DIR/private/$cn.key"
+  local key_tmp="$key_file.$$.tmp"
 
   (
     umask 0227
@@ -402,48 +511,95 @@ CA_key() {
     return $rc
   }
 
-  mv "$key_tmp" "$key" || return $?
+  mv "$key_tmp" "$key_file" || return $?
 }
 
 CA_csr() {
-  if [[ $# -ne 1 ]]; then
+  if [[ $# -lt 1 ]]; then
     CA_error "Invalid argument(s)"
     CA_function_usage "CN"
     return 1
   fi
 
-  ## FIXME: How to specify other attributes, such as C(ountry)?
-  local key_or_cn="$1"; shift
+  local key_file_or_cn="$1"; shift
 
-  local cn key
-  if [[ -f "$key_or_cn" ]]; then
-    key="$key_or_cn"
-    cn="${key_or_cn##*/}"
+  local cn key_file
+  if [[ -f "$key_file_or_cn" ]]; then
+    key_file="$key_file_or_cn"
+    cn="${key_file_or_cn##*/}"
     cn="${cn%.key}"
     cn="${cn,,}"
   else
-    cn="$key_or_cn"
-    key="$CA_DIR/private/$cn.key"
-    if [[ ! -f "$key" ]]; then
+    cn="$key_file_or_cn"
+    key_file="$CA_DIR/private/$cn.key"
+    if [[ ! -f "$key_file" ]]; then
       CA_key "$cn" || return $?
     fi
   fi
-  local csr="$CA_DIR/csr/$cn.csr"
-  local csr_tmp="$csr.$$.tmp"
 
+  local subject="/CN=$(CA_escape_value_oneline "$cn")"
+  local altnames_csv="$(CA_name_to_typed_altname "$cn")"
+  local altname_or_rdn altname altname_with_type
+  local rdn rdn_oneline
+  while [[ $# -gt 0 ]]; do
+    altname_or_rdn="$1"; shift
+    if [[ $altname_or_rdn == -- ]]; then
+      break
+    elif [[ $altname_or_rdn == *=* ]]; then
+      rdn="$altname_or_rdn"
+      rdn_oneline="$(CA_escape_attribute_oneline "$rdn")"
+      if [[ -z $rdn_oneline ]]; then
+	CA_error "Unknown attribute name: $rdn"
+	return 1
+      fi
+      subject+="+$rdn_oneline"
+    else
+      altname="$altname_or_rdn"
+      altname_with_type="$(CA_name_to_typed_altname "$altname")"
+      if [[ -z $altname_with_type ]]; then
+	CA_error "Unknown name type: $altname"
+	return 1
+      fi
+      altnames_csv+=",$altname_with_type"
+    fi
+  done
+
+  ## Construct suffix in the subject
+  local suffix suffix_oneline
+  while [[ $# -gt 0 ]]; do
+    suffix="$1"; shift
+    suffix_oneline="$(CA_escape_attribute_oneline "$suffix")"
+    if [[ -z $suffix_oneline ]]; then
+      CA_error "Unknown attribute name: $suffix"
+      return 1
+    fi
+    subject="/$suffix_oneline$subject"
+  done
+
+  local csr_file="$CA_DIR/csr/$cn.csr"
+  local csr_tmp="$csr_file.$$.tmp"
+  rm -f "$csr_tmp" || return $?
+  echo '#!/bin/sh' >>"$csr_tmp"
+  echo "cn=$(CA_quote_shell "$cn")" >>"$csr_tmp"
+  echo "subject=$(CA_quote_shell "$subject")" >>"$csr_tmp"
+  echo "altnames_csv=$(CA_quote_shell "$altnames_csv")" >>"$csr_tmp"
+  echo 'csr="\' >>"$csr_tmp"
+  CA_REQ_ALTNAMES="$altnames_csv" \
   CA_openssl req \
     -utf8 \
     -new \
-    -key "$key" \
-    -subj "/CN=$cn" \
-  >"$csr_tmp" \
+    -key "$key_file" \
+    -subj "$subject" \
+    -multivalue-rdn \
+  >>"$csr_tmp" \
   || {
     local rc=$?
     rm -f "$csr_tmp"
     return $rc
   }
+  echo '"' >>"$csr_tmp"
 
-  mv "$csr_tmp" "$csr" || return $?
+  mv "$csr_tmp" "$csr_file" || return $?
 }
 
 CA_sign() {
@@ -469,50 +625,71 @@ CA_sign() {
   fi
 
   ## FIXME: How to specify a policy?
-  local csr_or_cn="$1"; shift
+  local csr_file_or_cn="$1"; shift
 
-  local cn csr
-  if [[ -f "$csr_or_cn" ]]; then
-    csr="$csr_or_cn"
-    cn="${csr_or_cn##*/}"
+  local cn csr_file csr_file_has_info_p
+  if [[ -f "$csr_file_or_cn" ]]; then
+    csr_file="$csr_file_or_cn"
+    cn="${csr_file_or_cn##*/}"
     cn="${cn%.csr}"
     cn="${cn,,}"
-  else
-    cn="$csr_or_cn"
-    csr="$CA_DIR/csr/$cn.csr"
-    if [[ ! -f "$csr" ]]; then
-      CA_csr "$cn" || return $?
+    ## New style CSR file has additional information not only CSR
+    if file "$csr_file" |grep 'shell script' >/dev/null; then
+      csr_file_has_info_p=set
     fi
+  else
+    cn="$csr_file_or_cn"
+    csr_file="$CA_DIR/csr/$cn.csr"
+    csr_file_has_info_p=set
   fi
 
-  local cert="$CA_DIR/signed/$cn.crt"
-  if [[ -f $cert ]]; then
-    CA_error "Certificate already exists: $cert"
+  local cert_file="$CA_DIR/signed/$cn.crt"
+  if [[ -f $cert_file ]]; then
+    CA_error "Certificate already exists: $cert_file"
     return 1
   fi
 
-  local altnames="$(CA_name_to_altname "$cn")"
-  local altname
-  ## All identity names MUST be in subjectAltNames (RFC 6125)
-  for altname in "$@"; do
-    altnames+=",$(CA_name_to_altname "$altname")"
-  done
+  if [[ ! -f "$csr_file" ]]; then
+    CA_csr "$cn" "$@" || return $?
+    shift $#
+  fi
 
-  CA_CERT_ALTNAMES="$altnames" \
+  local subject altnames_csv csr
+  if [[ -n $csr_file_has_info_p ]]; then
+    if [[ $# -gt 0 ]]; then
+      CA_warn "Ignore alternative names and attributes in arguments"
+    fi
+    . "$csr_file" || return $?
+  else
+    subject="/CN=$(CA_escape_attribute_oneline "$cn")"
+    altnames_csv="DNS:$cn"
+    local altname altname_with_type
+    for altname in "$@"; do
+      altname_with_type="$(CA_name_to_typed_altname "$altname")"
+      if [[ -z $altname_with_type ]]; then
+	CA_error "Unknown name type: $altname"
+	return 1
+      fi
+      altnames_csv+=",$altname_with_type"
+    done
+  fi
+
+  CA_CERT_ALTNAMES="$altnames_csv" \
   CA_openssl_ca \
-    -in "$csr" \
-    -out "$cert" \
+    -subj "$subject" \
+    -in "$csr_file" \
+    -out "$cert_file" \
     -extensions "${cert_type}_cert_ext" \
   ;
   local rc=$?
   if [[ $rc -ne 0 ]]; then
-    rm -f "$cert"
+    rm -f "$cert_file"
     return $rc
   fi
 
   local serial
-  serial=$(CA_serial "$cert")
-  ln -sf "../signed/$serial.pem" "$cert"
+  serial=$(CA_serial "$cert_file")
+  ln -sf "../signed/$serial.pem" "$cert_file"
 }
 
 CA_status() {
