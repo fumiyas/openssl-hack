@@ -713,6 +713,7 @@ CA_revoke() {
     cn="$cert_file_or_cn"
     cert_file="$CA_DIR/signed/$cn.crt"
   fi
+  local key_file="$CA_DIR/private/$cn.key"
   local csr_file="$CA_DIR/csr/$cn.csr"
 
   if [[ ! -f "$cert_file" ]]; then
@@ -729,6 +730,9 @@ CA_revoke() {
   ;
 
   mv "$cert_file" "$CA_DIR/revoked/$serial.$cn.crt"
+  if [[ -f $key_file ]]; then
+    mv "$key_file" "$CA_DIR/revoked/$serial.$cn.key"
+  fi
   if [[ -f $csr_file ]]; then
     mv "$csr_file" "$CA_DIR/revoked/$serial.$cn.csr"
   fi
