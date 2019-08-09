@@ -708,30 +708,34 @@ CA_status() {
 }
 
 CA_revoke() {
-  local cert_or_cn="$1"; shift
+  local cert_file_or_cn="$1"; shift
 
-  local cn cert
-  if [[ -f "$cert_or_cn" ]]; then
-    cert="$cert_or_cn"
-    cn="${cert_or_cn##*/}"
+  local cn cert_file
+  if [[ -f "$cert_file_or_cn" ]]; then
+    cert_file="$cert_file_or_cn"
+    cn="${cert_file_or_cn##*/}"
     cn="${cn%.crt}"
     cn="${cn,,}"
   else
-    cn="$cert_or_cn"
-    cert="$CA_DIR/signed/$cn.crt"
+    cn="$cert_file_or_cn"
+    cert_file="$CA_DIR/signed/$cn.crt"
   fi
+  local csr_file="$CA_DIR/csr/$cn.csr"
 
-  if [[ ! -f "$cert" ]]; then
-    CA_error "No valid certificate found: $cert_or_cn"
+  if [[ ! -f "$cert_file" ]]; then
+    CA_error "No valid certificate found: $cert_file_or_cn"
     return 1
   fi
 
   CA_openssl_ca \
-    -revoke "$cert" \
+    -revoke "$cert_file" \
   || return $? \
   ;
 
-  mv "$cert" "$CA_DIR/revoked/"
+  mv "$cert_file" "$CA_DIR/revoked/"
+  if [[ -f $csr_file ]]; then
+    mv "$csr_file" "$CA_DIR/revoked/"
+  fi
 }
 
 CA_crl() {
