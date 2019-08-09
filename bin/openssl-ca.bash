@@ -471,9 +471,6 @@ CA_serial() {
       cert="$serial_or_cert_or_cn"
     else
       cert="$CA_DIR/signed/$serial_or_cert_or_cn.crt"
-      if [[ ! -f $cert ]]; then
-	cert="$CA_DIR/revoked/$serial_or_cert_or_cn.crt"
-      fi
     fi
 
     if [[ ! -f "$cert" ]]; then
@@ -723,14 +720,17 @@ CA_revoke() {
     return 1
   fi
 
+  local serial
+  serial=$(CA_serial "$cert_file") || return $?
+
   CA_openssl_ca \
     -revoke "$cert_file" \
   || return $? \
   ;
 
-  mv "$cert_file" "$CA_DIR/revoked/"
+  mv "$cert_file" "$CA_DIR/revoked/$serial.$cn.crt"
   if [[ -f $csr_file ]]; then
-    mv "$csr_file" "$CA_DIR/revoked/"
+    mv "$csr_file" "$CA_DIR/revoked/$serial.$cn.csr"
   fi
 }
 
