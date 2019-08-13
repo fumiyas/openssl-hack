@@ -179,23 +179,31 @@ CA_escape_attribute_oneline() {
 CA_type_of_value() {
   local value="$1"; shift
   local value_lower="${value,,}"
-  local type
 
   if  [[ $value_lower =~ ^[a-z_][a-z_0-9\-]*(\+[a-z_][a-z_0-9\-]*)*:// ]]; then
-    type='URI'
-  elif  [[ $value =~ ^(([12]?[0-9])?[0-9]\.){3}([12]?[0-9])?[0-9]$ ]]; then
-    ## FIXME: Restrict pattern to reject 10.0.0.299 and so on
-    ## FIXME: Support IPv6 addresses
-    type='IP'
-  elif  [[ $value_lower =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
-    type='DNS'
-  elif  [[ $value_lower =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
-    type='email'
-  else
-    return 1
+    echo 'URI'
+    return 0
   fi
 
-  echo "$type"
+  ## FIXME: Support IPv6 addresses
+  if  [[ $value =~ ^(([12][0-9]|[1-9])?[0-9]\.){3}([12][0-9]|[1-9])?[0-9]$ ]]; then
+    if  [[ ! $value =~ 25[6-9] && ! $value =~ 2[6-9][0-9] ]]; then
+      echo 'IP'
+      return 0
+    fi
+  fi
+
+  if  [[ $value_lower =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+    echo 'DNS'
+    return 0
+  fi
+
+  if  [[ $value_lower =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+    echo 'email'
+    return 0
+  fi
+
+  return 1
 }
 
 CA_name_to_typed_altname() {
