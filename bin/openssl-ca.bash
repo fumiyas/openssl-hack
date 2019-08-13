@@ -526,6 +526,8 @@ CA_key() {
   }
 
   mv "$key_tmp" "$key_file" || return $?
+
+  echo "Generated key file: $key_file"
 }
 
 CA_csr() {
@@ -614,6 +616,9 @@ CA_csr() {
   echo '"' >>"$csr_tmp"
 
   mv "$csr_tmp" "$csr_file" || return $?
+
+  echo "Used key file: $key_file"
+  echo "Generated CSR file: $csr_file"
 }
 
 CA_sign() {
@@ -704,6 +709,9 @@ CA_sign() {
   local serial
   serial=$(CA_serial "$cert_file") || return $?
   ln -sf "../signed/$serial.pem" "$cert_file"
+
+  echo "Used CSR file: $csr_file"
+  echo "Generated certificate file: $cert_file"
 }
 
 CA_status() {
