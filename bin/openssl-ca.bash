@@ -129,7 +129,7 @@ Export a PKCS#12 file from CN's key and certificate with CA certificate:
   $n p12 foo@example.jp
   $n p12 bar@example.jp "Bar's key and certificate"
 
-Revoke the certficate:
+Revoke the certficate for CN:
   $n revoke www.example.jp
   $n revoke foo@example.jp
 
@@ -143,6 +143,7 @@ Files in $ca_dir:
   crl/CA.crl			CA's CRL
   csr/*.csr			Generated or received CSRs
   private/*.key			Generated private keys
+  private/*.p12			Exported PKCS#12 files
   signed/*.crt			Signed certificates
   revoked/*.crt			Revoked certificates
 EOF
