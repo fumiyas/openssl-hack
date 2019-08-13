@@ -236,32 +236,21 @@ CA_init() {
   local name name_type name_nodes name_constraint
   ## FIXME: Support e-mail address
   for name in "$@"; do
-    name_type=""
-    if [[ $name =~ ^[0-9.]*$ ]]; then
-      name_type="IP"
-      name_nodes=(${name//./ })
-      if [[ ${#name_nodes[@]} != 4 ]]; then
-	name_type=""
-      else
-	for name_node in "${name_nodes[@]}"; do
-	  if [[ $name_node -gt 255 ]]; then
-	    name_type=""
-	    break
-	  fi
-	done
-      fi
+    name_type="$(CA_type_of_value "$name")"
+    if [[ -z $name_type ]]; then
+      CA_error "Unknown name type: $name"
+      return 1
     fi
 
-    if [[ -n $name_type ]]; then
-      name="$name_type $name"
-    else
+    if [[ $name_type == "DNS" ]]; then
       ## Remove a leading "." if any
-      name="DNS ${name#.}"
+      name="${name#.}"
     fi
 
-    name_constraint="permitted;$name"
+    name_constraint="permitted;$name_type $name"
     if [[ $name_type == "IP" ]]; then
-      name_constraint+="/255.255.255.255"
+      ## FIXME: Support custom netmask
+      name_constraint+="/255.255.255.0"
     fi
     ca_name_constraints+=("$name_constraint")
   done
@@ -388,7 +377,7 @@ EOF
 
   for name_constraint in "${ca_name_constraints[@]}"; do
     echo "$name_constraint"
-  done |awk '{ print $1"."NR" = "$2 }' \
+  done |awk '{ n[$1]++; print $1"."n[$1]" = "$2 }' \
   >>"$CA_DIR/etc/openssl.cnf" \
   ;
 
