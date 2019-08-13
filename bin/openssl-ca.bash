@@ -109,21 +109,25 @@ EOF
 Initialize CA directory ($ca_dir):
   $n init 'My Private CA (NO WARRANTY)' example.jp
 
-Generate a key pair:
+Generate a key pair for CN:
   $n key www.example.jp
   $n key foo@example.jp
 
-Generate (a key pair if not exists and) a CSR:
+Generate (a key pair if not exists and) a CSR for CN:
   $n csr www.example.jp
   $n csr ldap.example.jp master1.ldap.example.jp master2.example.jp
   $n csr foo@example.jp
   $n csr bar@example.jp uid=bar
 
-Generate (a CSR if not exists and) a certficate:
+Generate (a CSR if not exists and) a certficate for CN:
   $n sign www.example.jp
   $n sign ldap.example.jp master1.ldap.example.jp master2.example.jp
   $n sign --client foo@example.jp
   $n sign --client bar@example.jp uid=bar
+
+Export a PKCS#12 file from CN's key and certificate with CA certificate:
+  $n p12 foo@example.jp
+  $n p12 bar@example.jp "Bar's key and certificate"
 
 Revoke the certficate:
   $n revoke www.example.jp
@@ -454,7 +458,7 @@ CA_openssl() {
   local cmd="$1"; shift
   local args=()
 
-  if [[ $cmd != x509 ]]; then
+  if [[ $cmd != @(pkcs12|x509) ]]; then
     args+=(-config "$CA_DIR/etc/openssl.cnf")
   fi
 
@@ -712,6 +716,39 @@ CA_sign() {
 
   echo "Used CSR file: $csr_file"
   echo "Generated certificate file: $cert_file"
+}
+
+CA_p12() {
+  if [[ $# -lt 1 ]]; then
+    CA_error "Invalid argument(s)"
+    CA_subcommand_usage "CN [FRIENDLY_NAME]"
+    return 1
+  fi
+
+  local cn="$1"; shift
+  local name="$*"; shift $#
+
+  local cert_file="$CA_DIR/signed/$cn.crt"
+  local key_file="$CA_DIR/private/$cn.key"
+  local p12_file="$CA_DIR/private/$cn.p12"
+  local ca_cert_file="$CA_DIR/certs/CA.crt"
+
+  CA_openssl pkcs12 \
+    -export \
+    -in "$cert_file" \
+    -inkey "$key_file" \
+    -certfile "$ca_cert_file" \
+    -caname "$CA_TITLE" \
+    -out "$p12_file" \
+    ${name:+-name "$name"} \
+  || {
+    return $?
+  }
+
+  echo "Used key file: $key_file"
+  echo "Used certificate file: $cert_file"
+  echo "Used CA certificate file: $ca_cert_file"
+  echo "Generated PKCS#12 file: $p12_file"
 }
 
 CA_status() {
