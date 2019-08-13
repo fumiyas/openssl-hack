@@ -127,6 +127,7 @@ done
   -new \
   -x509 \
   -subj "/CN=$cn" \
+  -multivalue-rdn \
   -newkey "rsa:$rsa_bits" \
   -sha"$sha_bits" \
   -days "$crt_days" \
