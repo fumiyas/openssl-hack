@@ -242,7 +242,7 @@ CA_init() {
   local ca_title="${1:-$CA_TITLE}"; ${1+shift}
   local ca_name_constraints=()
 
-  local name name_type name_nodes name_constraint
+  local name name_type name_constraint
   ## FIXME: Support e-mail address
   for name in "$@"; do
     name_type="$(CA_type_of_value "$name")"
