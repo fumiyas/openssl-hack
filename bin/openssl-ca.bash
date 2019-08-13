@@ -58,7 +58,7 @@ _CA_prepare || return $?
 
 ## ======================================================================
 
-CA_caller_name() {
+CA_subcommand_name() {
   local caller="${FUNCNAME[2]}"
 
   if [[ -z ${CA_MODULE_SOURCED+set} ]]; then
@@ -69,17 +69,17 @@ CA_caller_name() {
 }
 
 CA_error() {
-  echo "$(CA_caller_name): ERROR: $*" 1>&2
+  echo "$(CA_subcommand_name): ERROR: $*" 1>&2
 }
 
 CA_warn() {
-  echo "$(CA_caller_name): WARNING: $*" 1>&2
+  echo "$(CA_subcommand_name): WARNING: $*" 1>&2
 }
 
-CA_function_usage() {
+CA_subcommand_usage() {
   local args="$1"; shift
 
-  echo "Usage: $(CA_caller_name) $args"
+  echo "Usage: $(CA_subcommand_name) $args"
 }
 
 CA_command_usage() {
@@ -226,7 +226,7 @@ CA_init() {
   fi
   if [[ $# -lt 2 ]]; then
     CA_error "Invalid argument(s)"
-    CA_function_usage "[/CA_DIR] CA_TITLE NAME_CONSTRAINTS [...]"
+    CA_subcommand_usage "[/CA_DIR] CA_TITLE NAME_CONSTRAINTS [...]"
     return 1
   fi
 
@@ -496,7 +496,7 @@ CA_serial() {
 CA_key() {
   if [[ $# -ne 1 ]]; then
     CA_error "Invalid argument(s)"
-    CA_function_usage "CN"
+    CA_subcommand_usage "CN"
     return 1
   fi
 
@@ -522,7 +522,7 @@ CA_key() {
 CA_csr() {
   if [[ $# -lt 1 ]]; then
     CA_error "Invalid argument(s)"
-    CA_function_usage "CN"
+    CA_subcommand_usage "CN [ALTNAME ...] [TYPE=VALUE ...]"
     return 1
   fi
 
@@ -625,7 +625,7 @@ CA_sign() {
 
   if [[ $# -lt 1 ]]; then
     CA_error "Invalid argument(s)"
-    CA_function_usage "CN [ALTNAME ...] [TYPE=VALUE ...]"
+    CA_subcommand_usage "CN [ALTNAME ...] [TYPE=VALUE ...]"
     return 1
   fi
 
