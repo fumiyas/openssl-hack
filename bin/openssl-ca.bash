@@ -91,13 +91,13 @@ EOF
 
   if [[ $CA_ARGV0 == "$0" ]]; then
     cat <<EOF
-  CA_DIR=/srv/ca $n init 'Demo CA (NO WARRANTY)' .example.jp
+  CA_DIR=/srv/ca $n init 'Demo CA (NO WARRANTY)' example.jp
     or
-  $n init /srv/ca 'Demo CA (NO WARRANTY)' .example.jp
+  $n init /srv/ca 'Demo CA (NO WARRANTY)' example.jp
 EOF
   else
     cat <<EOF
-  $n init 'Demo CA (NO WARRANTY)' .example.jp
+  $n init 'Demo CA (NO WARRANTY)' example.jp
 EOF
   fi
 
