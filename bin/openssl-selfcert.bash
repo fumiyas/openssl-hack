@@ -1,7 +1,7 @@
 #!/bin/bash
 ##
 ## OpenSSL: Create a self-signed certificate with X.509 extensions
-## Copyright (c) 2015-2018 SATOH Fumiyasu @ OSS Technology Corp., Japan
+## Copyright (c) 2015-2019 SATOH Fumiyasu @ OSS Technology Corp., Japan
 ##
 ## License: GNU General Public License version 3
 ##
@@ -39,6 +39,8 @@ Usage: $0 NAME [ALTERNATIVE NAMES ...]
 Examples:
   \$ $0 www.example.jp
   \$ $0 ldap.example.com master.ldap.example.com slave.ldap.example.com
+  \$ $0 foo@example.jp
+  \$ $0 bar@example.com+UID=bar
 "
 
 ## ----------------------------------------------------------------------
