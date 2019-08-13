@@ -734,15 +734,18 @@ CA_p12() {
   local p12_file="$CA_DIR/private/$cn.p12"
   local ca_cert_file="$CA_DIR/certs/CA.crt"
 
-  CA_openssl pkcs12 \
-    -export \
-    -in "$cert_file" \
-    -inkey "$key_file" \
-    -certfile "$ca_cert_file" \
-    -caname "$CA_TITLE" \
-    -out "$p12_file" \
-    ${name:+-name "$name"} \
-  || {
+  (
+    umask 0227
+    CA_openssl pkcs12 \
+      -export \
+      -in "$cert_file" \
+      -inkey "$key_file" \
+      -certfile "$ca_cert_file" \
+      -caname "$CA_TITLE" \
+      -out "$p12_file" \
+      ${name:+-name "$name"} \
+    ;
+  ) || {
     return $?
   }
 
