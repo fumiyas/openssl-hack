@@ -609,7 +609,7 @@ CA_csr() {
 
 CA_sign() {
   local cert_type="server"
-  if [[ $1 == --* ]]; then
+  if [[ ${1-} == --* ]]; then
     cert_type="${1#--}"
     shift
   fi
@@ -625,7 +625,7 @@ CA_sign() {
 
   if [[ $# -lt 1 ]]; then
     CA_error "Invalid argument(s)"
-    CA_function_usage "CN [ALTNAME ...]"
+    CA_function_usage "CN [ALTNAME ...] [TYPE=VALUE ...]"
     return 1
   fi
 
