@@ -84,46 +84,55 @@ CA_subcommand_usage() {
 
 CA_command_usage() {
   local n="${CA_ARGV0##*/}"
-
-  cat <<EOF
-Initialization:
-EOF
+  local ca_dir
 
   if [[ $CA_ARGV0 == "$0" ]]; then
-    cat <<EOF
-  CA_DIR=/srv/ca $n init 'Demo CA (NO WARRANTY)' example.jp
-    or
-  $n init /srv/ca 'Demo CA (NO WARRANTY)' example.jp
-EOF
+    ca_dir='$CA_DIR'
   else
-    cat <<EOF
-  $n init 'Demo CA (NO WARRANTY)' example.jp
-EOF
+    ca_dir="$CA_DIR"
   fi
 
   cat <<EOF
+Usage: $n COMMAND ...
 
-Usage:
 EOF
 
   if [[ $CA_ARGV0 == "$0" ]]; then
     cat <<EOF
-  export CA_DIR=/srv/ca
-    or
-  cd /srv/ca
-    and then
+Environment variables:
+  CA_DIR=/PATH/TO/CA/DIRECTORY (required)
+
 EOF
   fi
 
   cat <<EOF
+Initialize CA directory ($ca_dir):
+  $n init 'My Private CA (NO WARRANTY)' example.jp
+
+Generate a key pair:
   $n key www.example.jp
-  $n csr www.example.jp [altname.example.jp ...] [uid=foo ...]
-  $n sign www.example.jp [altname.example.jp ...] [uid=foo ...]
+  $n key foo@example.jp
+
+Generate (a key pair if not exists and) a CSR:
+  $n csr www.example.jp
+  $n csr ldap.example.jp master1.ldap.example.jp master2.example.jp
+  $n csr foo@example.jp
+  $n csr bar@example.jp uid=bar
+
+Generate (a CSR if not exists and) a certficate:
+  $n sign www.example.jp
+  $n sign ldap.example.jp master1.ldap.example.jp master2.example.jp
+  $n sign foo@example.jp
+  $n sign bar@example.jp uid=bar
+
+Revoke the certficate:
   $n revoke www.example.jp
-  $n status www.example.jp
+  $n revoke foo@example.jp
+
+Update the CRL file:
   $n crl
 
-Files in CA directory:
+Files in $ca_dir:
   etc/*				CA's configurations
   private/CA.key		CA's private key
   certs/CA.crt			CA's certificate
