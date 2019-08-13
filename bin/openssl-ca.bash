@@ -122,8 +122,8 @@ Generate (a key pair if not exists and) a CSR:
 Generate (a CSR if not exists and) a certficate:
   $n sign www.example.jp
   $n sign ldap.example.jp master1.ldap.example.jp master2.example.jp
-  $n sign foo@example.jp
-  $n sign bar@example.jp uid=bar
+  $n sign --client foo@example.jp
+  $n sign --client bar@example.jp uid=bar
 
 Revoke the certficate:
   $n revoke www.example.jp
