@@ -115,13 +115,13 @@ Generate a key pair for CN:
 
 Generate (a key pair if not exists and) a CSR for CN:
   $n csr www.example.jp
-  $n csr ldap.example.jp master1.ldap.example.jp master2.example.jp
+  $n csr sso.example.jp sso1.example.jp sso2.example.jp
   $n csr foo@example.jp
   $n csr bar@example.jp uid=bar
 
 Generate (a CSR if not exists and) a certficate for CN:
   $n sign www.example.jp
-  $n sign ldap.example.jp master1.ldap.example.jp master2.example.jp
+  $n sign sso.example.jp sso1.example.jp sso2.example.jp
   $n sign --client foo@example.jp
   $n sign --client bar@example.jp uid=bar
 
