@@ -256,11 +256,6 @@ CA_init() {
       return 1
     fi
 
-    if [[ $name_type == "DNS" ]]; then
-      ## Remove a leading "." if any
-      name="${name#.}"
-    fi
-
     name_constraint="permitted;$name_type $name"
     if [[ $name_type == "IP" ]]; then
       ## FIXME: Support custom netmask
