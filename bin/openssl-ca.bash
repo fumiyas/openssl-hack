@@ -423,7 +423,7 @@ nsComment=		$ENV::CA_TITLE Generated Client Certificate
 subjectKeyIdentifier=	hash
 authorityKeyIdentifier=	keyid,issuer:always
 keyUsage=		digitalSignature
-extendedKeyUsage=	clientAuth
+extendedKeyUsage=	clientAuth,emailProtection
 
 subjectAltName=		$ENV::CA_CERT_ALTNAMES
 
