@@ -207,7 +207,7 @@ CA_type_of_value() {
     fi
   fi
 
-  if  [[ $value_lower =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+  if  [[ $value_lower =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)*([a-z0-9][a-z0-9\-]+|[a-z])$ ]]; then
     echo 'DNS'
     return 0
   fi
