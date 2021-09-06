@@ -509,13 +509,14 @@ CA_key() {
     return 1
   fi
 
-  local cn="${1,,}"; shift
+  local cn="$1"; shift
+  local cn_canon="${cn,,}"
   local cn_type="$(CA_type_of_value "$cn")"
   if [[ -z $cn_type ]]; then
     CA_error "Invalid name or unknown type of name: $cn"
     return 1
   fi
-  local key_file="$CA_DIR/private/$cn.key"
+  local key_file="$CA_DIR/private/$cn_canon.key"
   local key_tmp="$key_file.$$.tmp"
 
   (
@@ -544,15 +545,16 @@ CA_csr() {
 
   local key_file_or_cn="$1"; shift
 
-  local cn key_file
+  local cn cn_canon key_file
   if [[ -f "$key_file_or_cn" ]]; then
     key_file="$key_file_or_cn"
     cn="${key_file_or_cn##*/}"
     cn="${cn%.key}"
-    cn="${cn,,}"
+    cn_canon="${cn,,}"
   else
     cn="$key_file_or_cn"
-    key_file="$CA_DIR/private/$cn.key"
+    cn_canon="${cn,,}"
+    key_file="$CA_DIR/private/$cn_canon.key"
     if [[ ! -f "$key_file" ]]; then
       CA_key "$cn" || return $?
     fi
@@ -601,7 +603,7 @@ CA_csr() {
     subject="/$suffix_oneline$subject"
   done
 
-  local csr_file="$CA_DIR/csr/$cn.csr"
+  local csr_file="$CA_DIR/csr/$cn_canon.csr"
   local csr_tmp="$csr_file.$$.tmp"
   rm -f "$csr_tmp" || return $?
   echo '#!/bin/sh' >>"$csr_tmp"
@@ -655,23 +657,24 @@ CA_sign() {
   ## FIXME: How to specify a policy?
   local csr_file_or_cn="$1"; shift
 
-  local cn csr_file csr_file_has_info_p
+  local cn cn_canon csr_file csr_file_has_info_p
   if [[ -f "$csr_file_or_cn" ]]; then
     csr_file="$csr_file_or_cn"
     cn="${csr_file_or_cn##*/}"
     cn="${cn%.csr}"
-    cn="${cn,,}"
+    cn_canon="${cn,,}"
     ## New style CSR file has additional information not only CSR
     if file "$csr_file" |grep 'shell script' >/dev/null; then
       csr_file_has_info_p=set
     fi
   else
     cn="$csr_file_or_cn"
-    csr_file="$CA_DIR/csr/$cn.csr"
+    cn_canon="${cn,,}"
+    csr_file="$CA_DIR/csr/$cn_canon.csr"
     csr_file_has_info_p=set
   fi
 
-  local cert_file="$CA_DIR/signed/$cn.crt"
+  local cert_file="$CA_DIR/signed/$cn_canon.crt"
   if [[ -f $cert_file ]]; then
     CA_error "Certificate already exists: $cert_file"
     return 1
@@ -731,11 +734,12 @@ CA_p12() {
   fi
 
   local cn="$1"; shift
+  local cn_canon="${cn,,}"
   local name="$*"; shift $#
 
-  local cert_file="$CA_DIR/signed/$cn.crt"
-  local key_file="$CA_DIR/private/$cn.key"
-  local p12_file="$CA_DIR/private/$cn.p12"
+  local cert_file="$CA_DIR/signed/$cn_caon.crt"
+  local key_file="$CA_DIR/private/$cn_caon.key"
+  local p12_file="$CA_DIR/private/$cn_caon.p12"
   local ca_cert_file="$CA_DIR/certs/CA.crt"
 
   (
@@ -773,18 +777,19 @@ CA_status() {
 CA_revoke() {
   local cert_file_or_cn="$1"; shift
 
-  local cn cert_file
+  local cn cn_canon cert_file
   if [[ -f "$cert_file_or_cn" ]]; then
     cert_file="$cert_file_or_cn"
     cn="${cert_file_or_cn##*/}"
     cn="${cn%.crt}"
-    cn="${cn,,}"
+    cn_canon="${cn,,}"
   else
     cn="$cert_file_or_cn"
-    cert_file="$CA_DIR/signed/$cn.crt"
+    cn_canon="${cn,,}"
+    cert_file="$CA_DIR/signed/$cn_canon.crt"
   fi
-  local key_file="$CA_DIR/private/$cn.key"
-  local csr_file="$CA_DIR/csr/$cn.csr"
+  local key_file="$CA_DIR/private/$cn_canon.key"
+  local csr_file="$CA_DIR/csr/$cn_canon.csr"
 
   if [[ ! -f "$cert_file" ]]; then
     CA_error "No valid certificate found: $cert_file_or_cn"
@@ -799,12 +804,12 @@ CA_revoke() {
   || return $? \
   ;
 
-  mv "$cert_file" "$CA_DIR/revoked/$serial.$cn.crt"
+  mv "$cert_file" "$CA_DIR/revoked/$serial.$cn_canon.crt"
   if [[ -f $key_file ]]; then
-    mv "$key_file" "$CA_DIR/revoked/$serial.$cn.key"
+    mv "$key_file" "$CA_DIR/revoked/$serial.$cn_canon.key"
   fi
   if [[ -f $csr_file ]]; then
-    mv "$csr_file" "$CA_DIR/revoked/$serial.$cn.csr"
+    mv "$csr_file" "$CA_DIR/revoked/$serial.$cn_canon.csr"
   fi
 }
 
