@@ -510,6 +510,11 @@ CA_key() {
   fi
 
   local cn="${1,,}"; shift
+  local cn_type="$(CA_type_of_value "$cn")"
+  if [[ -z $cn_type ]]; then
+    CA_error "Invalid name or unknown type of name: $cn"
+    return 1
+  fi
   local key_file="$CA_DIR/private/$cn.key"
   local key_tmp="$key_file.$$.tmp"
 
@@ -555,6 +560,10 @@ CA_csr() {
 
   local subject="/CN=$(CA_escape_value_oneline "$cn")"
   local altnames_csv="$(CA_name_to_typed_altname "$cn")"
+  if [[ -z $altnames_csv ]]; then
+    CA_error "Invalid name or unknown type of name: $cn"
+    return 1
+  fi
   local altname_or_rdn altname altname_with_type
   local rdn rdn_oneline
   while [[ $# -gt 0 ]]; do
