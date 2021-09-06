@@ -212,7 +212,7 @@ CA_type_of_value() {
     return 0
   fi
 
-  if  [[ $value_lower =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])+$ ]]; then
+  if  [[ $value_lower =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])$ ]]; then
     echo 'email'
     return 0
   fi
@@ -685,7 +685,7 @@ CA_sign() {
     shift $#
   fi
 
-  local subject altnames_csv csr
+  local subject altnames_csv
   if [[ -n $csr_file_has_info_p ]]; then
     if [[ $# -gt 0 ]]; then
       CA_warn "Ignore alternative names and attributes in arguments"
@@ -737,9 +737,9 @@ CA_p12() {
   local cn_canon="${cn,,}"
   local name="$*"; shift $#
 
-  local cert_file="$CA_DIR/signed/$cn_caon.crt"
-  local key_file="$CA_DIR/private/$cn_caon.key"
-  local p12_file="$CA_DIR/private/$cn_caon.p12"
+  local cert_file="$CA_DIR/signed/$cn_canon.crt"
+  local key_file="$CA_DIR/private/$cn_canon.key"
+  local p12_file="$CA_DIR/private/$cn_canon.p12"
   local ca_cert_file="$CA_DIR/certs/CA.crt"
 
   (
