@@ -252,7 +252,7 @@ CA_init() {
   for name in "$@"; do
     name_type="$(CA_type_of_value "$name")"
     if [[ -z $name_type ]]; then
-      CA_error "Unknown name type: $name"
+      CA_error "Invalid name or unknown type of name: $name"
       return 1
     fi
 
@@ -573,7 +573,7 @@ CA_csr() {
       altname="$altname_or_rdn"
       altname_with_type="$(CA_name_to_typed_altname "$altname")"
       if [[ -z $altname_with_type ]]; then
-	CA_error "Unknown name type: $altname"
+	CA_error "Invalid name or unknown type of name: $altname"
 	return 1
       fi
       altnames_csv+=",$altname_with_type"
@@ -686,7 +686,7 @@ CA_sign() {
     for altname in "$@"; do
       altname_with_type="$(CA_name_to_typed_altname "$altname")"
       if [[ -z $altname_with_type ]]; then
-	CA_error "Unknown name type: $altname"
+	CA_error "Invalid name or unknown type of name: $altname"
 	return 1
       fi
       altnames_csv+=",$altname_with_type"
