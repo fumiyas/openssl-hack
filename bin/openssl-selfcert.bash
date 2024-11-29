@@ -27,6 +27,53 @@ run() {
   "$@"
 }
 
+perr() {
+  echo "$0: ERROR: $1" 1>&2
+}
+
+pdie() {
+  perr "$1"
+  exit "${2-1}"
+}
+
+CA_type_of_value() {
+  local value="$1"; shift
+  local value_lower="${value,,}"
+
+  if  [[ $value_lower =~ ^[a-z_][a-z_0-9\-]*(\+[a-z_][a-z_0-9\-]*)*:// ]]; then
+    echo 'URI'
+    return 0
+  fi
+
+  if  [[
+    $value =~ ^((25[0-5]|(2[0-4]|1{,1}[0-9]){,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{,1}[0-9]){,1}[0-9])$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){7,7}[0-9A-Fa-f]{1,4}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,7}:$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,6}:[0-9A-Fa-f]{1,4}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,5}(:[0-9A-Fa-f]{1,4}){1,2}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,4}(:[0-9A-Fa-f]{1,4}){1,3}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,3}(:[0-9A-Fa-f]{1,4}){1,4}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,2}(:[0-9A-Fa-f]{1,4}){1,5}$
+    || $value =~ ^[0-9A-Fa-f]{1,4}:((:[0-9A-Fa-f]{1,4}){1,6})$
+    || $value =~ ^:((:[0-9A-Fa-f]{1,4}){1,7}|:)$
+  ]]; then
+    echo 'IP'
+    return 0
+  fi
+
+  if  [[ $value_lower =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)*([a-z0-9][a-z0-9\-]+|[a-z])$ ]]; then
+    echo 'DNS'
+    return 0
+  fi
+
+  if  [[ $value_lower =~ ^[^@]+@(([a-z0-9][a-z0-9\-]+|[a-z])+\.)+([a-z0-9][a-z0-9\-]+|[a-z])$ ]]; then
+    echo 'email'
+    return 0
+  fi
+
+  return 1
+}
+
 ## ======================================================================
 
 rsa_bits="4096"
@@ -59,28 +106,20 @@ nameconstraints=()
 
 ## All service identity names MUST be in subjectAltNames (RFC 9525)
 for altname in "$cn" "$@"; do
-  altname_type=""
-  if [[ $altname =~ ^[0-9.]*$ ]]; then
-    altname_type="IP"
-    altname_nodes=(${altname//./ })
-    if [[ ${#altname_nodes[@]} != 4 ]]; then
-      altname_type=""
-    else
-      for altname_node in "${altname_nodes[@]}"; do
-	if [[ $altname_node -gt 255 ]]; then
-	  altname_type=""
-	  break
-	fi
-      done
-    fi
+  altname_type=$(CA_type_of_value "$altname")
+  if [[ -z $altname_type ]]; then
+    pdie "Invalid name or unknown type of name: $altname"
   fi
 
-  altname="${altname_type:-DNS}:$altname"
-  altnames+=("$altname")
+  altnames+=("$altname_type:$altname")
 
-  nameconstraint="permitted;$altname"
+  nameconstraint="permitted;$altname_type:$altname"
   if [[ $altname_type == "IP" ]]; then
-    nameconstraint+="/255.255.255.255"
+    if [[ $altname == *.* ]]; then
+      nameconstraint+="/255.255.255.255"
+    else
+      nameconstraint+="/FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"
+    fi
   fi
   nameconstraints+=("$nameconstraint")
 done

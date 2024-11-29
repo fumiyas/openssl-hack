@@ -199,12 +199,20 @@ CA_type_of_value() {
     return 0
   fi
 
-  ## FIXME: Support IPv6 addresses
-  if  [[ $value =~ ^(([12][0-9]|[1-9])?[0-9]\.){3}([12][0-9]|[1-9])?[0-9]$ ]]; then
-    if  [[ ! $value =~ 25[6-9] && ! $value =~ 2[6-9][0-9] ]]; then
-      echo 'IP'
-      return 0
-    fi
+  if  [[
+    $value =~ ^((25[0-5]|(2[0-4]|1{,1}[0-9]){,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{,1}[0-9]){,1}[0-9])$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){7,7}[0-9A-Fa-f]{1,4}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,7}:$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,6}:[0-9A-Fa-f]{1,4}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,5}(:[0-9A-Fa-f]{1,4}){1,2}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,4}(:[0-9A-Fa-f]{1,4}){1,3}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,3}(:[0-9A-Fa-f]{1,4}){1,4}$
+    || $value =~ ^([0-9A-Fa-f]{1,4}:){1,2}(:[0-9A-Fa-f]{1,4}){1,5}$
+    || $value =~ ^[0-9A-Fa-f]{1,4}:((:[0-9A-Fa-f]{1,4}){1,6})$
+    || $value =~ ^:((:[0-9A-Fa-f]{1,4}){1,7}|:)$
+  ]]; then
+    echo 'IP'
+    return 0
   fi
 
   if  [[ $value_lower =~ ^(([a-z0-9][a-z0-9\-]+|[a-z])+\.)*([a-z0-9][a-z0-9\-]+|[a-z])$ ]]; then
@@ -259,7 +267,11 @@ CA_init() {
     name_constraint="permitted;$name_type $name"
     if [[ $name_type == "IP" ]]; then
       ## FIXME: Support custom netmask
-      name_constraint+="/255.255.255.0"
+      if [[ $name == *.* ]]; then
+        name_constraint+="/255.255.255.0"
+      else
+        nameconstraint+="/FFFF:FFFF:FFFF:FFFF::"
+      fi
     fi
     ca_name_constraints+=("$name_constraint")
   done
