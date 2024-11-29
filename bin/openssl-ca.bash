@@ -1,9 +1,9 @@
 #!/bin/bash
 ##
 ## OpenSSL: Simple and Stupid CA implementation
-## Copyright (c) 2015-2021 SATOH Fumiyasu @ OSSTech Corp., Japan
 ##
-## License: GNU General Public License version 3
+## SPDX-FileCopyrightText: 2015-2024 SATOH Fumiyasu @ OSSTech Corp., Japan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ##
 ## WARNING: This software comes with ABSOLUTELY NO WARRANTY
 ##
