@@ -57,7 +57,7 @@ cn="$1"; shift
 altnames=()
 nameconstraints=()
 
-## All identity names MUST be in subjectAltNames (RFC 6125)
+## All service identity names MUST be in subjectAltNames (RFC 9525)
 for altname in "$cn" "$@"; do
   altname_type=""
   if [[ $altname =~ ^[0-9.]*$ ]]; then
