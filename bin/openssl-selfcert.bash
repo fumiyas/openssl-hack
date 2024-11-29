@@ -75,7 +75,7 @@ for altname in "$cn" "$@"; do
     fi
   fi
 
-  altname="${altname_type:-DNS} $altname"
+  altname="${altname_type:-DNS}:$altname"
   altnames+=("$altname")
 
   nameconstraint="permitted;$altname"
@@ -87,45 +87,27 @@ done
 
 ## ----------------------------------------------------------------------
 
-(
-  echo "## openssl.cnf"
-  echo "[req]"
-  echo "distinguished_name = req_distinguished_name"
-  echo "x509_extensions = v3_ca"
-  echo "[req_distinguished_name]"
-  echo "[v3_ca]"
-  echo "subjectKeyIdentifier = hash"
-  echo "authorityKeyIdentifier = keyid:always,issuer"
-  echo "basicConstraints = CA:true"
+openssl_req_opts=(
+  -addext "basicConstraints=CA:true"
+  -addext "authorityKeyIdentifier=keyid:always, issuer"
+  -addext "subjectKeyIdentifier=hash"
+)
 
-  if [[ ${#altnames[@]} -gt 0 ]]; then
-    echo "[v3_ca]"
-    echo "subjectAltName = @altnames"
-    echo '[altnames]'
-    for altname in "${altnames[@]}"; do
-      echo "$altname"
-    done |awk '{ print $1"."NR" = "$2 }'
-  fi
+if [[ ${#nameconstraints[@]} -gt 0 ]]; then
+  nameconstraints_ext="${nameconstraints[*]}"
+  openssl_req_opts+=(-addext "nameConstraints=critical,${nameconstraints_ext// /, }")
+fi
 
-  echo "## NOTE: Following name constraints does NOT affect by OpenSSL and GnuTLS."
-  echo "[v3_ca]"
-  echo "nameConstraints = critical, @nameconstraints"
-  echo "[nameconstraints_dirname]"
-  echo "CN = $cn"
-  echo "[nameconstraints]"
-  echo "permitted;dirName = nameconstraints_dirname"
-  echo "## NOTE: Following name constraints does NOT affect by OpenSSL, GnuTLS and NSS."
-  echo "permitted;DNS.0 = $cn"
-  if [[ ${#nameconstraints[@]} -gt 0 ]]; then
-    for nameconstraint in "${nameconstraints[@]}"; do
-      echo "$nameconstraint"
-    done |awk '{ print $1"."NR" = "$2 }'
-  fi
-) \
-|tee -a /dev/stderr \
-|run openssl req \
+if [[ ${#altnames[@]} -gt 0 ]]; then
+  altnames_ext="${altnames[*]}"
+  openssl_req_opts+=(-addext "subjectAltName=${altnames_ext// /, }")
+fi
+
+## ----------------------------------------------------------------------
+
+run openssl req \
   -batch \
-  -config /dev/stdin \
+  -config /dev/null \
   -new \
   -x509 \
   -subj "/CN=$cn" \
@@ -136,6 +118,7 @@ done
   -out "$cn.crt" \
   -keyout "$cn.key" \
   -nodes \
+  "${openssl_req_opts[@]}" \
 || exit $?
 
 ## ----------------------------------------------------------------------
